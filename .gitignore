@@ -1,0 +1,36 @@
+# FairSeat — ignore private hackathon working notes and anything sensitive.
+# These must never enter git.
+private/
+
+# Secrets / env
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Solidity / Hardhat / Foundry
+artifacts/
+cache/
+cache_forge/
+out/
+typechain/
+typechain-types/
+broadcast/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
