@@ -72,6 +72,41 @@ export interface PendingCreationRow {
   created_at: number;
 }
 
+export interface PollRow {
+  id: number;
+  chat_id: number;
+  creator_identity: string;
+  question: string;
+  options_json: string;
+  mode: number; // 0 OnChainVote, 1 OffChainTap
+  close_block: number;
+  entries_close_at: number;
+  status: "open" | "closed";
+  committed: number;
+  created_at: number;
+}
+export interface PendingPollRow {
+  id: number;
+  creator_identity: string;
+  host_wallet: string;
+  chat_id: number;
+  question: string;
+  options_json: string;
+  num_options: number;
+  mode: number;
+  close_block: number;
+  entries_close_at: number;
+  matched: number;
+  created_at: number;
+}
+export interface PollVoteRow {
+  poll_id: number;
+  identity: string;
+  option: number;
+  wallet: string;
+  created_at: number;
+}
+
 export class FairSeatDB {
   private db: DatabaseSync;
 
@@ -141,6 +176,41 @@ export class FairSeatDB {
         draw_block          INTEGER NOT NULL,
         matched             INTEGER NOT NULL DEFAULT 0,
         created_at          INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS polls (
+        id                  INTEGER PRIMARY KEY,
+        chat_id             INTEGER NOT NULL,
+        creator_identity    TEXT NOT NULL,
+        question            TEXT NOT NULL,
+        options_json        TEXT NOT NULL,
+        mode                INTEGER NOT NULL,
+        close_block         INTEGER NOT NULL,
+        entries_close_at    INTEGER NOT NULL,
+        status              TEXT NOT NULL DEFAULT 'open',
+        committed           INTEGER NOT NULL DEFAULT 0,
+        created_at          INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS pending_polls (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        creator_identity    TEXT NOT NULL,
+        host_wallet         TEXT NOT NULL,
+        chat_id             INTEGER NOT NULL,
+        question            TEXT NOT NULL,
+        options_json        TEXT NOT NULL,
+        num_options         INTEGER NOT NULL,
+        mode                INTEGER NOT NULL,
+        close_block         INTEGER NOT NULL,
+        entries_close_at    INTEGER NOT NULL,
+        matched             INTEGER NOT NULL DEFAULT 0,
+        created_at          INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS poll_votes (
+        poll_id     INTEGER NOT NULL,
+        identity    TEXT NOT NULL,
+        option      INTEGER NOT NULL,
+        wallet      TEXT NOT NULL,
+        created_at  INTEGER NOT NULL,
+        PRIMARY KEY (poll_id, identity)
       );
     `);
   }
@@ -286,6 +356,73 @@ export class FairSeatDB {
   }
   markPendingMatched(id: number): void {
     this.db.prepare("UPDATE pending_creations SET matched = 1 WHERE id = ?").run(id);
+  }
+
+  // ---- polls ----
+  insertPendingPoll(p: Omit<PendingPollRow, "id" | "matched">): number {
+    const info = this.db
+      .prepare(
+        `INSERT INTO pending_polls
+         (creator_identity, host_wallet, chat_id, question, options_json, num_options, mode, close_block, entries_close_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(p.creator_identity, p.host_wallet, p.chat_id, p.question, p.options_json, p.num_options, p.mode, p.close_block, p.entries_close_at, p.created_at);
+    return Number(info.lastInsertRowid);
+  }
+  findMatchingPendingPoll(hostWallet: string, numOptions: number, closeBlock: number, mode: number): PendingPollRow | undefined {
+    return this.db
+      .prepare(
+        `SELECT * FROM pending_polls WHERE matched = 0 AND host_wallet = ? COLLATE NOCASE
+           AND num_options = ? AND close_block = ? AND mode = ? ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(hostWallet, numOptions, closeBlock, mode) as unknown as PendingPollRow | undefined;
+  }
+  markPendingPollMatched(id: number): void {
+    this.db.prepare("UPDATE pending_polls SET matched = 1 WHERE id = ?").run(id);
+  }
+  insertPoll(p: Omit<PollRow, "status" | "committed">): void {
+    this.db
+      .prepare(
+        `INSERT INTO polls (id, chat_id, creator_identity, question, options_json, mode, close_block, entries_close_at, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`
+      )
+      .run(p.id, p.chat_id, p.creator_identity, p.question, p.options_json, p.mode, p.close_block, p.entries_close_at, p.created_at);
+  }
+  getPoll(id: number): PollRow | undefined {
+    return this.db.prepare("SELECT * FROM polls WHERE id = ?").get(id) as unknown as PollRow | undefined;
+  }
+  listOpenPolls(): PollRow[] {
+    return this.db.prepare("SELECT * FROM polls WHERE status = 'open'").all() as unknown as PollRow[];
+  }
+  listPolls(): PollRow[] {
+    return this.db.prepare("SELECT * FROM polls ORDER BY id DESC").all() as unknown as PollRow[];
+  }
+  setPollCommitted(id: number): void {
+    this.db.prepare("UPDATE polls SET committed = 1 WHERE id = ?").run(id);
+  }
+  setPollStatus(id: number, status: PollRow["status"]): void {
+    this.db.prepare("UPDATE polls SET status = ? WHERE id = ?").run(status, id);
+  }
+  addVote(pollId: number, identity: string, option: number, wallet: string, createdAt: number): boolean {
+    try {
+      this.db
+        .prepare("INSERT INTO poll_votes (poll_id, identity, option, wallet, created_at) VALUES (?, ?, ?, ?, ?)")
+        .run(pollId, identity, option, wallet, createdAt);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  hasVoted(pollId: number, identity: string): boolean {
+    return !!this.db.prepare("SELECT 1 FROM poll_votes WHERE poll_id = ? AND identity = ?").get(pollId, identity);
+  }
+  getVotes(pollId: number): PollVoteRow[] {
+    return this.db.prepare("SELECT * FROM poll_votes WHERE poll_id = ? ORDER BY created_at ASC, rowid ASC").all(pollId) as unknown as PollVoteRow[];
+  }
+  tallyFromDb(pollId: number, numOptions: number): number[] {
+    const counts = new Array(numOptions).fill(0);
+    for (const v of this.getVotes(pollId)) if (v.option < numOptions) counts[v.option]++;
+    return counts;
   }
 
   close(): void {

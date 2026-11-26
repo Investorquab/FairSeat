@@ -44,11 +44,22 @@ export const VAULT_ABI = [
   "function getEntrants(uint256 id) view returns (address[])",
 ];
 
+export const POLL_ABI = [
+  "event PollCreated(uint256 indexed id, address indexed host, uint8 numOptions, uint64 closeBlock, uint8 mode)",
+  "event Voted(uint256 indexed id, address indexed voter, uint8 option)",
+  "function createPoll(uint8 numOptions, uint64 closeBlock, uint8 mode) returns (uint256)",
+  "function vote(uint256 id, uint8 option)",
+  "function commitVotes(uint256 id, address[] voters, uint8[] options)",
+  "function getPoll(uint256 id) view returns (address host, uint8 numOptions, uint64 closeBlock, uint8 mode, uint256 votes, bool closed)",
+  "function getTally(uint256 id) view returns (uint256[])",
+];
+
 export class Chain {
   readonly provider: ethers.JsonRpcProvider;
   readonly registry: ethers.Contract;
   readonly verifier: ethers.Contract;
   readonly vault: ethers.Contract;
+  readonly poll: ethers.Contract;
   readonly operator?: ethers.Wallet;
 
   constructor() {
@@ -56,11 +67,14 @@ export class Chain {
     this.provider = new ethers.JsonRpcProvider(config.rpcUrl, config.chainId, { staticNetwork: true });
     this.registry = new ethers.Contract(config.registryAddress, REGISTRY_ABI, this.provider);
     this.verifier = new ethers.Contract(config.verifierAddress, VERIFIER_ABI, this.provider);
+    const pollAddr = config.pollAddress || ethers.ZeroAddress;
     if (config.operatorKey) {
       this.operator = new ethers.Wallet(config.operatorKey, this.provider);
       this.vault = new ethers.Contract(config.vaultAddress, VAULT_ABI, this.operator);
+      this.poll = new ethers.Contract(pollAddr, POLL_ABI, this.operator);
     } else {
       this.vault = new ethers.Contract(config.vaultAddress, VAULT_ABI, this.provider);
+      this.poll = new ethers.Contract(pollAddr, POLL_ABI, this.provider);
     }
   }
 
@@ -111,5 +125,21 @@ export class Chain {
     const tx = await this.vault.resolve(id);
     await tx.wait();
     return tx.hash;
+  }
+
+  // ---- polls ----
+  encodeCreatePoll(numOptions: number, closeBlock: number, mode: number): { to: string; value: string; data: string } {
+    const iface = new ethers.Interface(POLL_ABI);
+    return { to: config.pollAddress, value: "0", data: iface.encodeFunctionData("createPoll", [numOptions, closeBlock, mode]) };
+  }
+  async commitVotes(id: number, voters: string[], options: number[]): Promise<string> {
+    if (!this.operator) throw new Error("operator key not configured");
+    const tx = await this.poll.commitVotes(id, voters, options);
+    await tx.wait();
+    return tx.hash;
+  }
+  async getTally(id: number): Promise<number[]> {
+    const t: bigint[] = await this.poll.getTally(id);
+    return t.map((x) => Number(x));
   }
 }

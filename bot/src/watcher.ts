@@ -1,13 +1,14 @@
 import { ethers } from "ethers";
 import type { Chain } from "./chain.js";
 import type { Service, ResolvedInfo } from "./service.js";
-import type { GiveawayRow } from "./db.js";
+import type { GiveawayRow, PollRow } from "./db.js";
 
 export interface Notifier {
   onVerified(identity: string, wallet: string): Promise<void>;
   onGiveawayLive(g: GiveawayRow): Promise<void>;
   onEntered?(giveawayId: number, identity: string): Promise<void>;
   onResolved(info: ResolvedInfo, seed: string, txHash: string): Promise<void>;
+  onPollLive?(p: PollRow): Promise<void>;
 }
 
 const POLL_MS = 5000;
@@ -55,8 +56,9 @@ export class Watcher {
       }
       this.last = current;
     }
-    // Drive the commit/resolve scheduler each poll.
+    // Drive the schedulers each poll.
     await this.service.tickDueGiveaways();
+    await this.service.tickDuePolls();
   }
 
   private async scan(from: number, to: number): Promise<void> {
@@ -98,6 +100,23 @@ export class Watcher {
       const txHash = (log as ethers.EventLog).transactionHash;
       const info = this.service.handleResolved(Number(a.id), a.winners, a.perWinner, a.seed, txHash);
       if (info) await this.notifier.onResolved(info, a.seed, txHash);
+    }
+
+    // PollCreated
+    for (const log of await this.chain.poll.queryFilter(this.chain.poll.filters.PollCreated(), from, to)) {
+      const a = (log as ethers.EventLog).args as unknown as {
+        id: bigint; host: string; numOptions: bigint; closeBlock: bigint; mode: bigint;
+      };
+      const p = this.service.handlePollCreated({
+        id: Number(a.id), host: a.host, numOptions: Number(a.numOptions), closeBlock: Number(a.closeBlock), mode: Number(a.mode),
+      });
+      if (p && this.notifier.onPollLive) await this.notifier.onPollLive(p);
+    }
+
+    // Voted (on-chain votes)
+    for (const log of await this.chain.poll.queryFilter(this.chain.poll.filters.Voted(), from, to)) {
+      const a = (log as ethers.EventLog).args as unknown as { id: bigint; voter: string; option: bigint };
+      this.service.handleOnChainVote(Number(a.id), a.voter, Number(a.option));
     }
   }
 }

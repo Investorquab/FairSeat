@@ -98,6 +98,35 @@ export function startApi(service: Service, port: number): http.Server {
         });
         return json(res, 200, r);
       }
+
+      // ---- polls ----
+      if (req.method === "GET" && path === "/api/polls") {
+        return json(res, 200, { polls: service.publicPolls() });
+      }
+      if ((m = path.match(/^\/api\/polls\/(\d+)$/)) && req.method === "GET") {
+        const v = service.pollView(Number(m[1]));
+        return v ? json(res, 200, v) : json(res, 404, { error: "not found" });
+      }
+      if ((m = path.match(/^\/api\/polls\/(\d+)\/vote$/)) && req.method === "POST") {
+        const b = await readBody(req);
+        const r = await service.votePoll(Number(m[1]), `web:${b.token}`, Number(b.option));
+        return json(res, 200, r);
+      }
+      if (req.method === "POST" && path === "/api/polls/prepare") {
+        const b = await readBody(req);
+        if (!b.hostWallet) return json(res, 400, { error: "hostWallet (connected wallet address) is required" });
+        const r = await service.preparePoll({
+          creatorIdentity: `web:${String(b.hostWallet).toLowerCase()}`,
+          hostWallet: b.hostWallet,
+          chatId: 0,
+          question: String(b.question ?? ""),
+          options: Array.isArray(b.options) ? b.options.map(String) : [],
+          mode: Number(b.mode ?? 1),
+          durationSeconds: Number(b.durationSeconds),
+        });
+        return json(res, 200, r);
+      }
+
       return json(res, 404, { error: "not found" });
     } catch (e) {
       return json(res, 500, { error: (e as Error).message });

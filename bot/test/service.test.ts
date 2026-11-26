@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { rmSync } from "node:fs";
 import { ethers } from "ethers";
 import { FairSeatDB } from "../src/db.js";
-import { Service, Rule, EntryMode } from "../src/service.js";
+import { Service, Rule, EntryMode, VoteMode } from "../src/service.js";
 import type { Chain } from "../src/chain.js";
 
 // A deterministic fake chain so service logic is tested without any network.
@@ -19,6 +19,12 @@ class FakeChain {
   }
   encodeCreateGiveaway(token: string, prizeWei: bigint) {
     return { to: "0xVault", value: token === ethers.ZeroAddress ? prizeWei.toString() : "0", data: "0xdata" };
+  }
+  encodeCreatePoll() {
+    return { to: "0xPoll", value: "0", data: "0xpoll" };
+  }
+  async commitVotes() {
+    return "0xvotes";
   }
   async commitEntrants() {
     return "0xcommit";
@@ -149,6 +155,34 @@ test("handleResolved maps winners to user identities", () => {
   assert.ok(info);
   assert.equal(info!.winners[0].identity, "tg:7");
   assert.equal(info!.giveaway.status, "resolved");
+  db.close();
+  rmSync(path, { force: true });
+});
+
+test("poll: create → one Agent ID one vote (tap) → public tally", async () => {
+  const { db, path } = freshDb();
+  const svc = new Service(db, new FakeChain() as unknown as Chain);
+  svc.handleVerified(WALLET_A, svc.startVerification("tg:10").amountWei!);
+  svc.handleVerified(WALLET_B, svc.startVerification("tg:11").amountWei!);
+
+  const prep = await svc.preparePoll({
+    creatorIdentity: "tg:10", hostWallet: WALLET_A, chatId: -1, question: "Which next?",
+    options: ["A", "B", "C"], mode: VoteMode.OffChainTap, durationSeconds: 3600,
+  });
+  assert.ok(!("error" in prep));
+  const closeBlock = (prep as { closeBlock: number }).closeBlock;
+  const poll = svc.handlePollCreated({ id: 1, host: WALLET_A, numOptions: 3, closeBlock, mode: VoteMode.OffChainTap });
+  assert.ok(poll);
+
+  assert.deepEqual(await svc.votePoll(1, "tg:10", 0), { ok: true, mode: "tap", option: 0 });
+  assert.deepEqual(await svc.votePoll(1, "tg:11", 0), { ok: true, mode: "tap", option: 0 });
+  assert.deepEqual(await svc.votePoll(1, "tg:10", 1), { ok: false, reason: "already" });
+  assert.deepEqual(await svc.votePoll(1, "tg:999", 0), { ok: false, reason: "not_verified" });
+  assert.deepEqual(await svc.votePoll(1, "tg:11", 9), { ok: false, reason: "bad_option" });
+
+  const v = svc.pollView(1)!;
+  assert.deepEqual(v.tally, [2, 0, 0]);
+  assert.equal(v.totalVotes, 2);
   db.close();
   rmSync(path, { force: true });
 });

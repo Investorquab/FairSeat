@@ -56,4 +56,20 @@ export const api = {
     get(`/api/verify/status?token=${token}`),
   enter: (id: number, token: string, key?: string): Promise<any> => post(`/api/giveaways/${id}/enter`, { token, key }),
   prepare: (b: Record<string, unknown>): Promise<any> => post("/api/prepare", b),
+  polls: (): Promise<{ polls: PollView[] }> => get("/api/polls"),
+  poll: (id: number): Promise<PollView> => get(`/api/polls/${id}`),
+  votePoll: (id: number, token: string, option: number): Promise<any> => post(`/api/polls/${id}/vote`, { token, option }),
+  preparePoll: (b: Record<string, unknown>): Promise<any> => post("/api/polls/prepare", b),
 };
+
+export interface PollView {
+  id: number;
+  question: string;
+  options: string[];
+  mode: number;
+  status: "open" | "closed";
+  closeBlock: number;
+  entriesCloseAt: number;
+  totalVotes: number;
+  tally: number[];
+}

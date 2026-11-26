@@ -9,6 +9,7 @@ export const config = {
   registryAddress: process.env.REGISTRY_ADDRESS ?? "",
   verifierAddress: process.env.VERIFIER_ADDRESS ?? "",
   vaultAddress: process.env.VAULT_ADDRESS ?? "",
+  pollAddress: process.env.POLL_ADDRESS ?? "",
   operatorKey: process.env.OPERATOR_KEY ?? "",
   dbPath: process.env.DB_PATH ?? "./fairseat.db",
   explorer: chainId === 56 ? "https://bscscan.com" : "https://testnet.bscscan.com",

@@ -4,6 +4,9 @@ import { Home } from "./pages/Home";
 import { GiveawayDetail } from "./pages/GiveawayDetail";
 import { Create } from "./pages/Create";
 import { VerifyDraw } from "./pages/VerifyDraw";
+import { Votes } from "./pages/Votes";
+import { PollDetail } from "./pages/PollDetail";
+import { CreatePoll } from "./pages/CreatePoll";
 
 const ConfigCtx = createContext<Config | null>(null);
 export const useConfig = () => useContext(ConfigCtx);
@@ -32,8 +35,9 @@ function Header({ route }: { route: string }) {
         </a>
         <nav className="nav">
           <a href="#/" className={is("#/")}>Giveaways</a>
+          <a href="#/votes" className={is("#/votes")}>Votes</a>
           <a href="#/create" className={is("#/create")}>Create</a>
-          <a href="#/verify" className={is("#/verify")}>Verify a draw</a>
+          <a href="#/verify" className={is("#/verify")}>Verify</a>
         </nav>
       </div>
     </header>
@@ -49,8 +53,12 @@ export function App() {
 
   let page;
   const gMatch = route.match(/^#\/g\/(\d+)/);
+  const pMatch = route.match(/^#\/p\/(\d+)/);
   if (gMatch) page = <GiveawayDetail id={Number(gMatch[1])} />;
+  else if (pMatch) page = <PollDetail id={Number(pMatch[1])} />;
+  else if (route.startsWith("#/create-poll")) page = <CreatePoll />;
   else if (route.startsWith("#/create")) page = <Create />;
+  else if (route.startsWith("#/votes")) page = <Votes />;
   else if (route.startsWith("#/verify")) page = <VerifyDraw />;
   else page = <Home />;
 

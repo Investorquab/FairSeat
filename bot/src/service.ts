@@ -7,6 +7,21 @@ import { generateVerifyAmount, matchVerification } from "./verify.js";
 
 export const Rule = { FirstN: 0, Random: 1, SplitEqually: 2 } as const;
 export const EntryMode = { OffChainTap: 0, OnChainEnter: 1 } as const;
+export const VoteMode = { OnChainVote: 0, OffChainTap: 1 } as const;
+
+export interface CreatePollParams {
+  creatorIdentity: string;
+  hostWallet: string;
+  chatId: number;
+  question: string;
+  options: string[];
+  mode: number;
+  durationSeconds: number;
+}
+export type VoteResult =
+  | { ok: true; mode: "tap"; option: number }
+  | { ok: true; mode: "onchain"; action: { to: string; value: string; data: string } }
+  | { ok: false; reason: "not_verified" | "not_open" | "closed" | "already" | "bad_option" };
 
 export const RULE_LABEL: Record<number, string> = {
   0: "first N entrants",
@@ -270,5 +285,106 @@ export class Service {
       winners: g.winners_json ? (JSON.parse(g.winners_json) as string[]) : null,
       resolveTx: g.resolve_tx,
     };
+  }
+
+  // ================= POLLS (one Agent ID, one vote) =================
+  async preparePoll(
+    p: CreatePollParams
+  ): Promise<{ pendingId: number; closeBlock: number; tx: { to: string; value: string; data: string } } | { error: string }> {
+    let hostWallet: string;
+    try {
+      hostWallet = ethers.getAddress(p.hostWallet);
+    } catch {
+      return { error: "A valid host wallet address is required." };
+    }
+    const opts = p.options.map((o) => o.trim()).filter(Boolean);
+    if (!p.question.trim()) return { error: "A question is required." };
+    if (opts.length < 2 || opts.length > 32) return { error: "Provide between 2 and 32 options." };
+
+    const now = await this.chain.blockNumber();
+    const entriesCloseAt = Date.now() + p.durationSeconds * 1000;
+    const closeBlock =
+      now + Math.ceil((p.durationSeconds + DRAW_DELAY_SEC) / config.blockTimeSec) + COMMIT_WINDOW_BLOCKS + DRAW_SAFETY_BLOCKS;
+
+    const pendingId = this.db.insertPendingPoll({
+      creator_identity: p.creatorIdentity, host_wallet: hostWallet, chat_id: p.chatId,
+      question: p.question.trim(), options_json: JSON.stringify(opts), num_options: opts.length,
+      mode: p.mode, close_block: closeBlock, entries_close_at: entriesCloseAt, created_at: Date.now(),
+    });
+    const tx = this.chain.encodeCreatePoll(opts.length, closeBlock, p.mode);
+    return { pendingId, closeBlock, tx };
+  }
+
+  handlePollCreated(ev: { id: number; host: string; numOptions: number; closeBlock: number; mode: number }) {
+    if (this.db.getPoll(ev.id)) return null;
+    const pending = this.db.findMatchingPendingPoll(ev.host, ev.numOptions, ev.closeBlock, ev.mode);
+    if (!pending) return null;
+    this.db.insertPoll({
+      id: ev.id, chat_id: pending.chat_id, creator_identity: pending.creator_identity,
+      question: pending.question, options_json: pending.options_json, mode: ev.mode,
+      close_block: ev.closeBlock, entries_close_at: pending.entries_close_at, created_at: Date.now(),
+    });
+    this.db.markPendingPollMatched(pending.id);
+    return this.db.getPoll(ev.id);
+  }
+
+  async votePoll(pollId: number, identity: string, option: number): Promise<VoteResult> {
+    const poll = this.db.getPoll(pollId);
+    if (!poll || poll.status !== "open") return { ok: false, reason: "not_open" };
+    const user = this.db.getUser(identity);
+    if (!user) return { ok: false, reason: "not_verified" };
+    const numOptions = (JSON.parse(poll.options_json) as string[]).length;
+    if (option < 0 || option >= numOptions) return { ok: false, reason: "bad_option" };
+    if (Date.now() >= poll.entries_close_at) return { ok: false, reason: "closed" };
+    if (this.db.hasVoted(pollId, identity)) return { ok: false, reason: "already" };
+
+    if (poll.mode === VoteMode.OnChainVote) {
+      const iface = new ethers.Interface(["function vote(uint256 id, uint8 option)"]);
+      return { ok: true, mode: "onchain", action: { to: config.pollAddress, value: "0", data: iface.encodeFunctionData("vote", [pollId, option]) } };
+    }
+    this.db.addVote(pollId, identity, option, user.wallet, Date.now());
+    return { ok: true, mode: "tap", option };
+  }
+
+  handleOnChainVote(pollId: number, voter: string, option: number): string | null {
+    const user = this.db.getUserByWallet(voter);
+    this.db.addVote(pollId, user?.identity ?? `wallet:${voter.toLowerCase()}`, option, ethers.getAddress(voter), Date.now());
+    return user?.identity ?? null;
+  }
+
+  async tickDuePolls(): Promise<void> {
+    const current = await this.chain.blockNumber();
+    const now = Date.now();
+    for (const poll of this.db.listOpenPolls()) {
+      if (poll.mode === VoteMode.OffChainTap && !poll.committed && now >= poll.entries_close_at && current < poll.close_block) {
+        const votes = this.db.getVotes(poll.id);
+        if (votes.length > 0) await this.chain.commitVotes(poll.id, votes.map((v) => v.wallet), votes.map((v) => v.option));
+        this.db.setPollCommitted(poll.id);
+      }
+      if (current > poll.close_block) this.db.setPollStatus(poll.id, "closed");
+    }
+  }
+
+  private toPollView(poll: import("./db.js").PollRow) {
+    const options = JSON.parse(poll.options_json) as string[];
+    const tally = this.db.tallyFromDb(poll.id, options.length);
+    return {
+      id: poll.id,
+      question: poll.question,
+      options,
+      mode: poll.mode,
+      status: poll.status,
+      closeBlock: poll.close_block,
+      entriesCloseAt: poll.entries_close_at,
+      totalVotes: tally.reduce((a, b) => a + b, 0),
+      tally,
+    };
+  }
+  publicPolls() {
+    return this.db.listPolls().map((p) => this.toPollView(p));
+  }
+  pollView(id: number) {
+    const poll = this.db.getPoll(id);
+    return poll ? this.toPollView(poll) : null;
   }
 }

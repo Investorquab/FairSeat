@@ -3,9 +3,9 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import { ethers } from "ethers";
 import type { Chain } from "./chain.js";
 import type { Service, ResolvedInfo } from "./service.js";
-import type { GiveawayRow } from "./db.js";
+import type { GiveawayRow, PollRow } from "./db.js";
 import { config } from "./config.js";
-import { Rule, EntryMode, RULE_LABEL } from "./service.js";
+import { Rule, EntryMode, VoteMode, RULE_LABEL } from "./service.js";
 import { formatAmount } from "./verify.js";
 import type { Notifier } from "./watcher.js";
 
@@ -149,6 +149,86 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     }
   });
 
+  // /poll Your question? | Option A | Option B [| Option C] [| dur=1h] [| mode=tap|onchain]
+  bot.command("poll", async (ctx) => {
+    if (!ctx.chat || ctx.chat.type === "private") {
+      await ctx.reply("Run /poll inside your group so I know where to post it.");
+      return;
+    }
+    const member = await ctx.api.getChatMember(ctx.chat.id, ctx.from!.id);
+    if (member.status !== "administrator" && member.status !== "creator") {
+      await ctx.reply("Only a group admin can create a poll.");
+      return;
+    }
+    const segs = (ctx.match ?? "").split("|").map((s) => s.trim()).filter(Boolean);
+    if (segs.length < 3) {
+      await ctx.reply("Usage: /poll Your question? | Option A | Option B [| Option C] [| dur=1h] [| mode=onchain]");
+      return;
+    }
+    const question = segs[0];
+    let durationSeconds = 3600;
+    let mode: number = VoteMode.OffChainTap;
+    const options: string[] = [];
+    for (const s of segs.slice(1)) {
+      const dv = s.match(/^(?:dur|duration)=(.+)$/i);
+      const mv = s.match(/^mode=(.+)$/i);
+      if (dv) durationSeconds = parseDuration(dv[1]) ?? 3600;
+      else if (mv) mode = mv[1].toLowerCase().startsWith("on") ? VoteMode.OnChainVote : VoteMode.OffChainTap;
+      else options.push(s);
+    }
+    if (options.length < 2) return void ctx.reply("A poll needs at least 2 options.");
+
+    const identity = idOf(ctx.from!.id);
+    const hostWallet = service.walletOf(identity);
+    if (!hostWallet) {
+      await ctx.reply("Verify first so I know which wallet creates the poll — DM me /verify.");
+      return;
+    }
+    const prep = await service.preparePoll({
+      creatorIdentity: identity, hostWallet, chatId: ctx.chat.id, question, options, mode, durationSeconds,
+    });
+    if ("error" in prep) return void ctx.reply("⚠️ " + prep.error);
+
+    const msg =
+      "🗳️ *Create your poll*\n\n" +
+      `*${question}*\n${options.map((o, i) => `${i + 1}. ${o}`).join("\n")}\n\n` +
+      "Execute this transaction from your verified wallet to open the poll on-chain (no funds, just gas):\n" +
+      `• To: \`${prep.tx.to}\`\n• Data: \`${prep.tx.data}\`\n\n` +
+      "The moment it's on-chain I'll post the poll here with a button per option.";
+    try {
+      await ctx.api.sendMessage(ctx.from!.id, msg, { parse_mode: "Markdown" });
+      await ctx.reply("📩 I've DM'd you the one transaction to open the poll.");
+    } catch {
+      await ctx.reply(msg, { parse_mode: "Markdown" });
+    }
+  });
+
+  // Vote button
+  bot.callbackQuery(/^pv:(\d+):(\d+)$/, async (ctx) => {
+    const id = Number(ctx.match![1]);
+    const option = Number(ctx.match![2]);
+    const identity = idOf(ctx.from.id);
+    if (!service.walletOf(identity)) {
+      await ctx.answerCallbackQuery({ text: "Verify first: DM me /verify.", show_alert: true });
+      return;
+    }
+    const res = await service.votePoll(id, identity, option);
+    if (res.ok && res.mode === "tap") {
+      await ctx.answerCallbackQuery({ text: "✅ Vote counted. Thanks!", show_alert: true });
+    } else if (res.ok && res.mode === "onchain") {
+      await ctx.answerCallbackQuery({ text: "This poll uses on-chain voting — vote from the FairSeat site.", show_alert: true });
+    } else {
+      const map: Record<string, string> = {
+        not_verified: "Verify first: DM me /verify.",
+        not_open: "This poll isn't open.",
+        closed: "Voting has closed.",
+        already: "You've already voted.",
+        bad_option: "Invalid option.",
+      };
+      await ctx.answerCallbackQuery({ text: map[(res as { reason: string }).reason] ?? "Could not vote.", show_alert: true });
+    }
+  });
+
   // Enter button (public / members tap).
   bot.callbackQuery(/^enter:(\d+)$/, async (ctx) => {
     const id = Number(ctx.match![1]);
@@ -241,6 +321,18 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
           }
         }
       }
+    },
+    async onPollLive(poll: PollRow) {
+      if (!poll.chat_id) return;
+      const options = JSON.parse(poll.options_json) as string[];
+      const kb = new InlineKeyboard();
+      options.forEach((o, i) => kb.text(o, `pv:${poll.id}:${i}`).row());
+      const text =
+        "🗳️ *Poll is live!*\n\n" +
+        `*${poll.question}*\n\n` +
+        "One Agent ID, one vote. Tap to vote 👇\n" +
+        `_Tally is public on-chain: ${config.explorer}/address/${config.pollAddress}_`;
+      await bot.api.sendMessage(poll.chat_id, text, { parse_mode: "Markdown", reply_markup: kb });
     },
   };
 
