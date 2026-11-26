@@ -51,6 +51,13 @@ async function main() {
   const vaultAddress = await vault.getAddress();
   console.log(`GiveawayVault: ${vaultAddress}`);
 
+  // 4b) Deploy Poll (one Agent ID, one vote).
+  const Poll = await ethers.getContractFactory("Poll");
+  const poll = await Poll.deploy(registryAddress, operator);
+  await poll.waitForDeployment();
+  const pollAddress = await poll.getAddress();
+  console.log(`Poll: ${pollAddress}`);
+
   // 5) Persist addresses for the backend / verification scripts.
   const fs = await import("fs");
   const path = await import("path");
@@ -64,6 +71,7 @@ async function main() {
     operator,
     verifier: verifierAddress,
     vault: vaultAddress,
+    poll: pollAddress,
     deployer: deployer.address,
     deployedAt: new Date().toISOString(),
   };
