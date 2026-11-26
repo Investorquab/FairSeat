@@ -7,6 +7,7 @@ import { VerifyDraw } from "./pages/VerifyDraw";
 import { Votes } from "./pages/Votes";
 import { PollDetail } from "./pages/PollDetail";
 import { CreatePoll } from "./pages/CreatePoll";
+import { Distribute } from "./pages/Distribute";
 
 const ConfigCtx = createContext<Config | null>(null);
 export const useConfig = () => useContext(ConfigCtx);
@@ -36,6 +37,7 @@ function Header({ route }: { route: string }) {
         <nav className="nav">
           <a href="#/" className={is("#/")}>Giveaways</a>
           <a href="#/votes" className={is("#/votes")}>Votes</a>
+          <a href="#/distribute" className={is("#/distribute")}>Distribute</a>
           <a href="#/create" className={is("#/create")}>Create</a>
           <a href="#/verify" className={is("#/verify")}>Verify</a>
         </nav>
@@ -59,6 +61,7 @@ export function App() {
   else if (route.startsWith("#/create-poll")) page = <CreatePoll />;
   else if (route.startsWith("#/create")) page = <Create />;
   else if (route.startsWith("#/votes")) page = <Votes />;
+  else if (route.startsWith("#/distribute")) page = <Distribute />;
   else if (route.startsWith("#/verify")) page = <VerifyDraw />;
   else page = <Home />;
 

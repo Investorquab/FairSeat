@@ -58,6 +58,13 @@ async function main() {
   const pollAddress = await poll.getAddress();
   console.log(`Poll: ${pollAddress}`);
 
+  // 4c) Deploy BatchDistributor (pay a verified list in one tx).
+  const Dist = await ethers.getContractFactory("BatchDistributor");
+  const dist = await Dist.deploy(registryAddress);
+  await dist.waitForDeployment();
+  const distributorAddress = await dist.getAddress();
+  console.log(`BatchDistributor: ${distributorAddress}`);
+
   // 5) Persist addresses for the backend / verification scripts.
   const fs = await import("fs");
   const path = await import("path");
@@ -72,6 +79,7 @@ async function main() {
     verifier: verifierAddress,
     vault: vaultAddress,
     poll: pollAddress,
+    distributor: distributorAddress,
     deployer: deployer.address,
     deployedAt: new Date().toISOString(),
   };

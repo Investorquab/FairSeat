@@ -42,6 +42,8 @@ export function startApi(service: Service, port: number): http.Server {
           chainId: config.chainId,
           verifier: config.verifierAddress,
           vault: config.vaultAddress,
+          poll: config.pollAddress,
+          distributor: process.env.DISTRIBUTOR_ADDRESS ?? "",
           registry: config.registryAddress,
           explorer: config.explorer,
           nativeSymbol: config.nativeSymbol,

@@ -39,6 +39,8 @@ export interface Config {
   chainId: number;
   verifier: string;
   vault: string;
+  poll?: string;
+  distributor?: string;
   registry: string;
   explorer: string;
   nativeSymbol: string;
