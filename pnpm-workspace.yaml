@@ -1,4 +1,4 @@
 packages:
   - "contracts"
-  # - "bot"   # added in Phase A (M2)
+  - "bot"
   # - "web"   # added in Phase B (M4)

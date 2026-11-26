@@ -1,0 +1,24 @@
+{
+  "name": "@fairseat/bot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FairSeat Telegram bot + chain-watcher backend.",
+  "scripts": {
+    "check": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node --experimental-sqlite dist/index.js",
+    "test": "node --experimental-sqlite --import tsx --test test/service.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0",
+    "grammy": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
