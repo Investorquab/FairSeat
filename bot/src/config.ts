@@ -13,6 +13,9 @@ export const config = {
   dbPath: process.env.DB_PATH ?? "./fairseat.db",
   explorer: chainId === 56 ? "https://bscscan.com" : "https://testnet.bscscan.com",
   nativeSymbol: chainId === 56 ? "BNB" : "tBNB",
+  // Average seconds per block for this network, used to place the draw block safely after
+  // the (wall-clock) entry window. BSC testnet ~0.45s; mainnet ~0.75s. Override per network.
+  blockTimeSec: Number(process.env.BLOCK_TIME_SEC ?? (chainId === 56 ? "0.75" : "0.45")),
 };
 
 export function assertChainConfig(): void {

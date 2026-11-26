@@ -16,10 +16,11 @@ export const RULE_LABEL: Record<number, string> = {
 // Entries close this many blocks before the draw block, so the off-chain set can be
 // committed on-chain before the seed (draw block) exists.
 export const COMMIT_WINDOW_BLOCKS = 15;
-// Assume a very fast block time when sizing the draw block, so it always lands well AFTER
-// entries close by wall clock (BSC blocks can be sub-second; underestimating would close
-// entries early). The real entry window is wall-clock based, not block based.
-const ASSUMED_BLOCK_SEC = 0.5;
+// Seconds after entries close (wall clock) before the draw block is expected — leaves room
+// to commit the entrant set on-chain. Combined with a +20-block cushion, this keeps the
+// draw block safely AFTER the entry window even if blocks run a bit fast.
+const DRAW_DELAY_SEC = 20;
+const DRAW_SAFETY_BLOCKS = 20;
 
 export interface CreateParams {
   creatorTelegramId: number;
@@ -82,8 +83,10 @@ export class Service {
 
     const now = await this.chain.blockNumber();
     const entriesCloseAt = Date.now() + p.durationSeconds * 1000;
-    const durationBlocks = Math.ceil(p.durationSeconds / ASSUMED_BLOCK_SEC);
-    const drawBlock = now + durationBlocks + COMMIT_WINDOW_BLOCKS + 10;
+    // Place the draw block ~DRAW_DELAY_SEC after entries close, in blocks, plus cushions.
+    const blocksUntilDraw =
+      Math.ceil((p.durationSeconds + DRAW_DELAY_SEC) / config.blockTimeSec) + COMMIT_WINDOW_BLOCKS + DRAW_SAFETY_BLOCKS;
+    const drawBlock = now + blocksUntilDraw;
 
     const pendingId = this.db.insertPendingCreation({
       creator_telegram_id: p.creatorTelegramId,
@@ -188,6 +191,13 @@ export class Service {
       }
       // 2) Resolve after the draw block (the Resolved event drives result-posting).
       if (current > g.draw_block && (g.entry_mode === EntryMode.OnChainEnter || g.committed)) {
+        await this.chain.resolve(g.id);
+        this.db.setGiveawayStatus(g.id, "resolved");
+      } else if (g.entry_mode === EntryMode.OffChainTap && !g.committed && current > g.draw_block) {
+        // Safety net: the commit window was missed (should not happen with correct block-time
+        // config). Resolve anyway so the locked prize can never get stuck — with no committed
+        // entrants the contract simply refunds the host.
+        console.warn(`[scheduler] giveaway ${g.id} missed its commit window; resolving to free funds`);
         await this.chain.resolve(g.id);
         this.db.setGiveawayStatus(g.id, "resolved");
       }
