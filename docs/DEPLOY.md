@@ -24,7 +24,7 @@ pnpm hardhat run scripts/deploy.ts --network bscMainnet
 ```
 
 On mainnet the script automatically uses the **real Agent ID registry**
-(`0x60B9262456dE011F7d15a54cdd8c48bAaa8B022f`) — it never deploys a mock. It prints the deployed
+(`0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F`) — it never deploys a mock. It prints the deployed
 addresses and writes them to `contracts/deployments/bscMainnet.json`.
 
 ## 2. Verify the source on BscScan
@@ -33,7 +33,7 @@ A verified, open-source contract is required. For each deployed contract:
 
 ```bash
 # Verifier(registry)
-pnpm hardhat verify --network bscMainnet <VERIFIER> 0x60B9262456dE011F7d15a54cdd8c48bAaa8B022f
+pnpm hardhat verify --network bscMainnet <VERIFIER> 0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F
 # GiveawayVault(registry, operator)  and  Poll(registry, operator)
 pnpm hardhat verify --network bscMainnet <VAULT> 0x60B9...022f <OPERATOR>
 pnpm hardhat verify --network bscMainnet <POLL>  0x60B9...022f <OPERATOR>

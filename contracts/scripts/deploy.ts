@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
 
 // The real Binance / SPACE ID Agent ID registry on BNB mainnet (chainId 56).
-const MAINNET_REGISTRY = "0x60B9262456dE011F7d15a54cdd8c48bAaa8B022f";
+const MAINNET_REGISTRY = "0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -31,10 +31,12 @@ async function main() {
   } else {
     console.log(`Using REGISTRY_ADDRESS override: ${registryAddress}`);
   }
+  // Normalize to a checksummed address so any-case input never trips ethers' validation.
+  registryAddress = ethers.getAddress(registryAddress.toLowerCase());
 
   // 2) Operator = the FairSeat backend wallet allowed to commit off-chain-tap entrants.
   //    Defaults to the deployer for testnet; set OPERATOR_ADDRESS for mainnet.
-  const operator = process.env.OPERATOR_ADDRESS || deployer.address;
+  const operator = ethers.getAddress((process.env.OPERATOR_ADDRESS || deployer.address).toLowerCase());
   console.log(`Operator (entrant committer): ${operator}`);
 
   // 3) Deploy FairSeatVerifier.
