@@ -9,6 +9,10 @@ import type { FairSeatDB } from "./db.js";
 const BASE = 100_000_000_000_000n; // 0.0001 ether
 const STEP = 100_000_000n; // 1e8 wei granularity (keeps the decimal short-ish)
 
+// A pending verification is only matchable for this long, limiting the window in which its
+// (user-private) dust amount is live (F-4 mitigation).
+export const VERIFY_TTL_MS = 60 * 60 * 1000;
+
 export function generateVerifyAmount(db: FairSeatDB): bigint {
   for (let i = 0; i < 100; i++) {
     const rand = BigInt(Math.floor(Math.random() * 999_999) + 1); // 1..999999
@@ -37,6 +41,10 @@ export function matchVerification(
 ): VerificationMatch | null {
   const session = db.getPendingSessionByAmount(amountWei.toString());
   if (!session) return null;
+  if (now - session.created_at > VERIFY_TTL_MS) {
+    db.markSessionExpired(session.id);
+    return null;
+  }
 
   const wallet = ethers.getAddress(account); // checksum
   db.bindUser(session.identity, wallet, now);

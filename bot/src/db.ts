@@ -126,10 +126,11 @@ export class FairSeatDB {
       CREATE TABLE IF NOT EXISTS verify_sessions (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         identity    TEXT NOT NULL,
-        amount_wei  TEXT NOT NULL UNIQUE,
+        amount_wei  TEXT NOT NULL,
         status      TEXT NOT NULL DEFAULT 'pending',
         created_at  INTEGER NOT NULL
       );
+      CREATE INDEX IF NOT EXISTS idx_verify_amount ON verify_sessions(amount_wei);
       CREATE TABLE IF NOT EXISTS giveaways (
         id                  INTEGER PRIMARY KEY,
         chat_id             INTEGER NOT NULL,
@@ -225,6 +226,10 @@ export class FairSeatDB {
       .get(wallet) as unknown as UserRow | undefined;
   }
   bindUser(identity: string, wallet: string, verifiedAt: number): void {
+    // One wallet = one seat. A wallet can be re-pointed to a new identity (e.g. moving from
+    // Telegram to web): drop any other identity holding this wallet first, so the UNIQUE(wallet)
+    // constraint never throws inside the watcher (F-3).
+    this.db.prepare("DELETE FROM users WHERE wallet = ? COLLATE NOCASE AND identity != ?").run(wallet, identity);
     this.db
       .prepare(
         `INSERT INTO users (identity, wallet, verified_at) VALUES (?, ?, ?)
@@ -254,6 +259,9 @@ export class FairSeatDB {
   }
   markSessionVerified(id: number): void {
     this.db.prepare("UPDATE verify_sessions SET status = 'verified' WHERE id = ?").run(id);
+  }
+  markSessionExpired(id: number): void {
+    this.db.prepare("UPDATE verify_sessions SET status = 'expired' WHERE id = ?").run(id);
   }
 
   // ---- giveaways ----

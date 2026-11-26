@@ -203,6 +203,33 @@ describe("GiveawayVault", () => {
     expect(await ethers.provider.getBalance(await vault.getAddress())).to.equal(0n);
   });
 
+  it("a winner that rejects funds is skipped, not a DoS — funds never lock (F-1)", async () => {
+    const { reg, vault, host, operator, a, resolver } = await deploy();
+    const Rej = await ethers.getContractFactory("RejectingReceiver");
+    const rej = await Rej.deploy();
+    await rej.waitForDeployment();
+    const rejAddr = await rej.getAddress();
+    await (await reg.assign(rejAddr)).wait(); // the rejecter holds an Agent ID
+
+    const prize = ethers.parseEther("2");
+    const drawBlock = (await currentBlock()) + 6n;
+    await vault
+      .connect(host)
+      .createGiveaway(ethers.ZeroAddress, prize, 2, Rule.FirstN, EntryMode.OffChainTap, drawBlock, { value: prize });
+    // FirstN winners = [rejecter, a]
+    await (await vault.connect(operator).commitEntrants(1, [rejAddr, a.address])).wait();
+
+    const aBefore = await ethers.provider.getBalance(a.address);
+    const hostBefore = await ethers.provider.getBalance(host.address);
+    await mine(6);
+    await (await vault.connect(resolver).resolve(1)).wait(); // must NOT revert
+
+    // a is paid; the rejecter's share returns to the host as leftover; nothing is stuck.
+    expect(await ethers.provider.getBalance(a.address)).to.equal(aBefore + ethers.parseEther("1"));
+    expect(await ethers.provider.getBalance(host.address)).to.equal(hostBefore + ethers.parseEther("1"));
+    expect(await ethers.provider.getBalance(await vault.getAddress())).to.equal(0n);
+  });
+
   it("no entrants → full refund to host", async () => {
     const { vault, host, resolver } = await deploy();
     const prize = ethers.parseEther("1");

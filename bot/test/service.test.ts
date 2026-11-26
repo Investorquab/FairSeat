@@ -159,6 +159,33 @@ test("handleResolved maps winners to user identities", () => {
   rmSync(path, { force: true });
 });
 
+test("one wallet = one seat: re-binding a wallet to a new identity never throws (F-3)", () => {
+  const { db, path } = freshDb();
+  const now = Date.now();
+  db.bindUser("tg:1", WALLET_A, now);
+  // Re-point the same wallet to a new identity (e.g. Telegram → web) — must not throw.
+  db.bindUser("web:x", WALLET_A, now);
+  assert.equal(db.getUser("web:x")?.wallet, WALLET_A);
+  assert.equal(db.getUser("tg:1"), undefined); // old identity dropped; still one seat
+  assert.equal(db.getUserByWallet(WALLET_A)?.identity, "web:x");
+  // Reusing a past amount across sessions must not throw (no global UNIQUE anymore).
+  db.createVerifySession("tg:2", "12345", now);
+  db.createVerifySession("tg:3", "12345", now);
+  db.close();
+  rmSync(path, { force: true });
+});
+
+test("expired verification sessions no longer bind (F-4)", () => {
+  const { db, path } = freshDb();
+  const svc = new Service(db, new FakeChain() as unknown as Chain);
+  const staleAmount = "999999999999";
+  db.createVerifySession("web:stale", staleAmount, Date.now() - 2 * 60 * 60 * 1000); // 2h old
+  assert.equal(svc.handleVerified(WALLET_B, BigInt(staleAmount)), null); // expired → no bind
+  assert.equal(svc.walletOf("web:stale"), undefined);
+  db.close();
+  rmSync(path, { force: true });
+});
+
 test("poll: create → one Agent ID one vote (tap) → public tally", async () => {
   const { db, path } = freshDb();
   const svc = new Service(db, new FakeChain() as unknown as Chain);

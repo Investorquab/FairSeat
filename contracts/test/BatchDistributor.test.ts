@@ -69,6 +69,25 @@ describe("BatchDistributor", () => {
     await expect(dist.connect(sender).distribute(ethers.ZeroAddress, [a.address], [ethers.parseEther("1")], { value: 123 })).to.be.revertedWithCustomError(dist, "BadValue");
   });
 
+  it("a recipient that rejects funds is skipped + refunded, not a DoS (F-2)", async () => {
+    const { reg, dist, sender, a } = await deploy();
+    const Rej = await ethers.getContractFactory("RejectingReceiver");
+    const rej = await Rej.deploy();
+    await rej.waitForDeployment();
+    const rejAddr = await rej.getAddress();
+    await (await reg.assign(rejAddr)).wait(); // the rejecter holds an Agent ID
+
+    await expect(
+      dist.connect(sender).distribute(ethers.ZeroAddress, [a.address, rejAddr], [ethers.parseEther("1"), ethers.parseEther("2")], { value: ethers.parseEther("3") })
+    )
+      .to.emit(dist, "Skipped")
+      .withArgs(rejAddr, ethers.parseEther("2"))
+      .and.to.emit(dist, "Distributed")
+      .withArgs(sender.address, ethers.ZeroAddress, 1, ethers.parseEther("1"), ethers.parseEther("2"));
+    // contract keeps nothing; the rejecter's share was refunded to the sender.
+    expect(await ethers.provider.getBalance(await dist.getAddress())).to.equal(0n);
+  });
+
   it("holders() previews which addresses hold an Agent ID", async () => {
     const { dist, a, b, c } = await deploy();
     expect(await dist.holders([a.address, b.address, c.address])).to.deep.equal([true, true, false]);

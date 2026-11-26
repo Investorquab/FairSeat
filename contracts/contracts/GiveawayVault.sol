@@ -118,7 +118,7 @@ contract GiveawayVault is ReentrancyGuard {
         Rule rule,
         EntryMode entryMode,
         uint64 drawBlock
-    ) external payable returns (uint256 id) {
+    ) external payable nonReentrant returns (uint256 id) {
         if (prize == 0) revert BadParams();
         if (rule != Rule.SplitEqually && winnerCount == 0) revert BadParams();
         if (drawBlock <= block.number) revert BadParams();
@@ -222,14 +222,15 @@ contract GiveawayVault is ReentrancyGuard {
 
         uint256 totalPaid;
         for (uint256 i = 0; i < winners.length; i++) {
-            // Defensive: only pay winners that still hold an Agent ID.
+            // Only pay winners that hold an Agent ID; a transfer that fails (e.g. a winner whose
+            // wallet rejects funds) is skipped, never reverted, so one bad winner cannot lock the
+            // giveaway. A skipped winner's share stays in `leftover` and returns to the host.
             if (registry.balanceOf(winners[i]) == 0) continue;
-            _payout(g.token, winners[i], perWinner);
-            totalPaid += perWinner;
+            if (_tryPay(g.token, winners[i], perWinner)) totalPaid += perWinner;
         }
 
         uint256 leftover = prize - totalPaid;
-        if (leftover > 0) _payout(g.token, g.host, leftover);
+        if (leftover > 0) _tryPay(g.token, g.host, leftover);
 
         emit Resolved(id, seed, winners, perWinner, leftover);
     }
@@ -291,6 +292,18 @@ contract GiveawayVault is ReentrancyGuard {
         } else {
             IERC20(token).safeTransfer(to, amount);
         }
+    }
+
+    /// @dev Best-effort transfer used in `resolve`: returns false instead of reverting, so one
+    ///      recipient that rejects funds can never block the whole payout (F-1).
+    function _tryPay(address token, address to, uint256 amount) internal returns (bool) {
+        if (amount == 0) return true;
+        if (token == address(0)) {
+            (bool ok, ) = payable(to).call{value: amount}("");
+            return ok;
+        }
+        (bool ok2, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, amount));
+        return ok2 && (data.length == 0 || abi.decode(data, (bool)));
     }
 
     // ----------------------------------------------------------------------------------

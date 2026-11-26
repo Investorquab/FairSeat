@@ -61,9 +61,14 @@ contract BatchDistributor is ReentrancyGuard {
             address to = recipients[i];
             uint256 amt = amounts[i];
             if (to != address(0) && amt > 0 && registry.balanceOf(to) > 0) {
-                _pay(token, to, amt);
-                paid += amt;
-                paidCount++;
+                // Best-effort: if a recipient rejects funds, skip it (share refunded below)
+                // rather than reverting the whole batch (F-2).
+                if (_tryPay(token, to, amt)) {
+                    paid += amt;
+                    paidCount++;
+                } else {
+                    emit Skipped(to, amt);
+                }
             } else if (amt > 0) {
                 emit Skipped(to, amt);
             }
@@ -88,5 +93,16 @@ contract BatchDistributor is ReentrancyGuard {
         } else {
             IERC20(token).safeTransfer(to, amount);
         }
+    }
+
+    /// @dev Best-effort transfer for recipients: returns false instead of reverting (F-2).
+    function _tryPay(address token, address to, uint256 amount) internal returns (bool) {
+        if (amount == 0) return true;
+        if (token == address(0)) {
+            (bool ok, ) = payable(to).call{value: amount}("");
+            return ok;
+        }
+        (bool ok2, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, amount));
+        return ok2 && (data.length == 0 || abi.decode(data, (bool)));
     }
 }
