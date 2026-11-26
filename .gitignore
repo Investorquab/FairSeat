@@ -39,3 +39,8 @@ deployments/
 Thumbs.db
 .idea/
 .vscode/
+
+# Bot runtime database (SQLite)
+*.db
+*.db-shm
+*.db-wal
