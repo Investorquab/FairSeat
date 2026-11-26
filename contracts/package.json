@@ -12,10 +12,12 @@
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.6.1",
     "@types/chai": "^4.3.20",
     "@types/mocha": "^10.0.9",
     "@types/node": "^22.9.0",
     "dotenv": "^16.4.5",
+    "ethers": "^6.17.0",
     "hardhat": "^2.22.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
