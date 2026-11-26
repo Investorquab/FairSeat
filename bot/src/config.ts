@@ -6,7 +6,7 @@ const chainId = Number(process.env.CHAIN_ID ?? "56");
 export const config = {
   botToken: process.env.BOT_TOKEN ?? "",
   chainId,
-  rpcUrl: process.env.RPC_URL ?? (chainId === 56 ? "https://bsc-rpc.publicnode.com" : "https://bsc-testnet-rpc.publicnode.com"),
+  rpcUrl: process.env.RPC_URL ?? (chainId === 56 ? "https://bsc-dataseed.bnbchain.org" : "https://bsc-testnet-rpc.publicnode.com"),
   registryAddress: process.env.REGISTRY_ADDRESS ?? "",
   verifierAddress: process.env.VERIFIER_ADDRESS ?? "",
   vaultAddress: process.env.VAULT_ADDRESS ?? "",
