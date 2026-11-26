@@ -33,11 +33,14 @@ const config: HardhatUserConfig = {
     },
   },
   // Used by `hardhat verify` to publish source on BscScan.
+  // Etherscan v2 unified API: a single key routes to every chain (incl. BSC 56 / 97).
+  // The old per-network { bsc, bscTestnet } form hits the deprecated v1 endpoint, which
+  // now returns an HTML error page ("Unexpected token '<'").
   etherscan: {
-    apiKey: {
-      bsc: process.env.BSCSCAN_API_KEY || "",
-      bscTestnet: process.env.BSCSCAN_API_KEY || "",
-    },
+    apiKey: process.env.BSCSCAN_API_KEY || "",
+  },
+  sourcify: {
+    enabled: false,
   },
 };
 
