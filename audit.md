@@ -15,7 +15,7 @@ assistant); no third-party audit — treat as **internally audited**, not indepe
 | F-3 | Medium | Backend — verification availability / seat integrity | **Fixed** + regression test |
 | F-4 | Low | Backend — verification binding uses a user-private amount | Mitigated (TTL); residual low |
 | F-5 | Low | GiveawayVault — late-resolve seed grinding | Documented; primary path avoids |
-| F-6 | Low | API — no rate limiting | Residual; mitigate at the reverse proxy |
+| F-6 | Low | API — no rate limiting | **Fixed** (per-IP limit) + proxy guidance |
 
 No Critical or High findings. No way was found to steal locked funds, to withdraw as a non-host, to
 get more than one seat per Agent ID, or to make the bot sign for a user.
@@ -74,9 +74,10 @@ the timing. The backend resolves promptly, so the primary (un-grindable) path is
 in the contract; residual risk only when resolution is very late.
 
 ### F-6 · Low · No API rate limiting
-The HTTP API has no built-in rate limiting, so `verify/start` and `prepare` could be spammed (junk
-rows, resource use). No funds or integrity at risk. **Mitigation:** rate-limit at the reverse proxy in
-production (see `docs/DEPLOY.md`).
+The HTTP API had no built-in rate limiting, so write endpoints (`verify/start`, `prepare`, `vote`,
+`enter`) could be spammed (junk rows, resource use). No funds or integrity at risk.
+**Fix:** a per-IP sliding-window limit (40 write requests/minute) on POST endpoints, returning 429.
+Production should also rate-limit at the reverse proxy (see `docs/DEPLOY.md`).
 
 ## Hardening also applied
 - `createGiveaway` marked `nonReentrant` (defensive; `resolve`/`cancel`/`distribute` already were).

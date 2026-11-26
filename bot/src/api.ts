@@ -30,12 +30,29 @@ function readBody(req: http.IncomingMessage): Promise<any> {
   });
 }
 
+// Simple per-IP rate limit on write endpoints (F-6): a sliding window in memory. In production,
+// also rate-limit at the reverse proxy.
+const RL_WINDOW_MS = 60_000;
+const RL_MAX = 40;
+const rlHits = new Map<string, number[]>();
+function rateLimited(req: http.IncomingMessage): boolean {
+  const fwd = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0];
+  const ip = (fwd || req.socket.remoteAddress || "unknown").trim();
+  const now = Date.now();
+  const arr = (rlHits.get(ip) ?? []).filter((t) => now - t < RL_WINDOW_MS);
+  arr.push(now);
+  rlHits.set(ip, arr);
+  if (rlHits.size > 5000) for (const [k, v] of rlHits) if (v.every((t) => now - t > RL_WINDOW_MS)) rlHits.delete(k);
+  return arr.length > RL_MAX;
+}
+
 export function startApi(service: Service, port: number): http.Server {
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://x");
       const path = url.pathname;
       if (req.method === "OPTIONS") return json(res, 204, {});
+      if (req.method === "POST" && rateLimited(req)) return json(res, 429, { error: "rate limited" });
 
       if (req.method === "GET" && path === "/api/config") {
         return json(res, 200, {
