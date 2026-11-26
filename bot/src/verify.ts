@@ -23,12 +23,12 @@ export function formatAmount(wei: bigint): string {
 }
 
 export interface VerificationMatch {
-  telegramId: number;
+  identity: string;
   wallet: string;
 }
 
-// Called when a `Verified` event is seen on-chain. Returns the bound Telegram user, or null
-// if the amount doesn't match any pending session (e.g. someone verified without the bot).
+// Called when a `Verified` event is seen on-chain. Returns the bound user identity, or null
+// if the amount doesn't match any pending session (e.g. someone verified without us).
 export function matchVerification(
   db: FairSeatDB,
   account: string,
@@ -39,7 +39,7 @@ export function matchVerification(
   if (!session) return null;
 
   const wallet = ethers.getAddress(account); // checksum
-  db.bindUser(session.telegram_id, wallet, now);
+  db.bindUser(session.identity, wallet, now);
   db.markSessionVerified(session.id);
-  return { telegramId: session.telegram_id, wallet };
+  return { identity: session.identity, wallet };
 }

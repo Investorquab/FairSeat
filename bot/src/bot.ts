@@ -9,6 +9,10 @@ import { Rule, EntryMode, RULE_LABEL } from "./service.js";
 import { formatAmount } from "./verify.js";
 import type { Notifier } from "./watcher.js";
 
+const idOf = (telegramId: number) => `tg:${telegramId}`;
+const tgIdFromIdentity = (identity: string): number | null =>
+  identity.startsWith("tg:") ? Number(identity.slice(3)) : null;
+
 function parseDuration(s: string): number | null {
   const m = s.match(/^(\d+)\s*(s|m|h|d)?$/i);
   if (!m) return null;
@@ -57,8 +61,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
       await ctx.reply("Please DM me /verify so your verification stays private.");
       return;
     }
-    const tid = ctx.from!.id;
-    const res = service.startVerification(tid);
+    const res = service.startVerification(idOf(ctx.from!.id));
     if (res.alreadyVerified) {
       await ctx.reply(`✅ You're already verified.\nWallet: \`${res.wallet}\``, { parse_mode: "Markdown" });
       return;
@@ -77,7 +80,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
   });
 
   bot.command("mystatus", async (ctx) => {
-    const w = service.walletOf(ctx.from!.id);
+    const w = service.walletOf(idOf(ctx.from!.id));
     await ctx.reply(w ? `✅ Verified. Wallet: \`${w}\`` : "Not verified yet. Send /verify in a private chat.", {
       parse_mode: "Markdown",
     });
@@ -111,7 +114,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     const winnerCount = a.winners ? Number(a.winners) : 1;
 
     const prep = await service.prepareGiveaway({
-      creatorTelegramId: ctx.from!.id,
+      creatorIdentity: idOf(ctx.from!.id),
       chatId: ctx.chat.id,
       token: ethers.ZeroAddress,
       prizeWei: ethers.parseEther(String(amount)),
@@ -141,21 +144,21 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
   // Enter button (public / members tap).
   bot.callbackQuery(/^enter:(\d+)$/, async (ctx) => {
     const id = Number(ctx.match![1]);
-    const tid = ctx.from.id;
-    if (!service.walletOf(tid)) {
+    const identity = idOf(ctx.from.id);
+    if (!service.walletOf(identity)) {
       await ctx.answerCallbackQuery({ text: "Verify first: DM me /verify.", show_alert: true });
       return;
     }
     let membershipOk = true;
     try {
       if (ctx.chat) {
-        const m = await ctx.api.getChatMember(ctx.chat.id, tid);
+        const m = await ctx.api.getChatMember(ctx.chat.id, ctx.from.id);
         membershipOk = ["member", "administrator", "creator"].includes(m.status);
       }
     } catch {
       membershipOk = false;
     }
-    const res = await service.enterGiveaway(id, tid, { membershipOk });
+    const res = await service.enterGiveaway(id, identity, { membershipOk });
     if (res.ok && res.mode === "tap") {
       await ctx.answerCallbackQuery({ text: "✅ You're in! Good luck.", show_alert: true });
     } else if (res.ok && res.mode === "onchain") {
@@ -178,20 +181,23 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     const [idStr, key] = (ctx.match ?? "").trim().split(/\s+/);
     const id = Number(idStr);
     if (!id) return void ctx.reply("Usage: /enter <giveawayId> <access key>");
-    const res = await service.enterGiveaway(id, ctx.from!.id, { membershipOk: true, providedKey: key });
+    const res = await service.enterGiveaway(id, idOf(ctx.from!.id), { membershipOk: true, providedKey: key });
     await ctx.reply(res.ok ? "✅ You're in! Good luck." : "⚠️ Could not enter (" + (res as { reason: string }).reason + ").");
   });
 
   // ---- notifier (used by the watcher to push updates to Telegram) ----
   const notifier: Notifier = {
-    async onVerified(telegramId, wallet) {
+    async onVerified(identity, wallet) {
+      const tg = tgIdFromIdentity(identity);
+      if (tg === null) return; // web users poll the API instead of getting a DM
       await bot.api.sendMessage(
-        telegramId,
+        tg,
         `✅ *Verified!* Your Agent ID wallet \`${wallet}\` is linked. Joining anything is now one tap.`,
         { parse_mode: "Markdown" }
       );
     },
     async onGiveawayLive(g: GiveawayRow) {
+      if (!g.chat_id) return; // web-only giveaway: shown on the site, not in Telegram
       const amount = formatAmount(BigInt(g.prize_wei));
       const kb = new InlineKeyboard().text("🎟️ Enter", `enter:${g.id}`);
       const text =
@@ -206,17 +212,20 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     },
     async onResolved(info: ResolvedInfo, seed, txHash) {
       const amount = formatAmount(info.perWinnerWei);
-      const lines = info.winners.map((w) => `• \`${w.address}\`${w.telegramId ? ` (<@${w.telegramId}>)` : ""}`).join("\n");
+      const lines = info.winners.map((w) => `• \`${w.address}\``).join("\n");
       const text =
         "🏆 *Giveaway resolved!*\n\n" +
         (info.winners.length ? `Winners (${amount} ${config.nativeSymbol} each):\n${lines}\n\n` : "No entrants — prize returned to the host.\n\n") +
         `Provably fair — seed from block hash \`${seed.slice(0, 18)}…\`\n` +
         `Verify on-chain: ${config.explorer}/tx/${txHash}`;
-      await bot.api.sendMessage(info.giveaway.chat_id, text, { parse_mode: "Markdown" });
+      if (info.giveaway.chat_id) {
+        await bot.api.sendMessage(info.giveaway.chat_id, text, { parse_mode: "Markdown" });
+      }
       for (const w of info.winners) {
-        if (w.telegramId) {
+        const tg = w.identity ? tgIdFromIdentity(w.identity) : null;
+        if (tg !== null) {
           try {
-            await bot.api.sendMessage(w.telegramId, `🎉 You won *${amount} ${config.nativeSymbol}*! Paid to \`${w.address}\`.`, {
+            await bot.api.sendMessage(tg, `🎉 You won *${amount} ${config.nativeSymbol}*! Paid to \`${w.address}\`.`, {
               parse_mode: "Markdown",
             });
           } catch {

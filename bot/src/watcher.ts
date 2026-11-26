@@ -4,9 +4,9 @@ import type { Service, ResolvedInfo } from "./service.js";
 import type { GiveawayRow } from "./db.js";
 
 export interface Notifier {
-  onVerified(telegramId: number, wallet: string): Promise<void>;
+  onVerified(identity: string, wallet: string): Promise<void>;
   onGiveawayLive(g: GiveawayRow): Promise<void>;
-  onEntered?(giveawayId: number, telegramId: number): Promise<void>;
+  onEntered?(giveawayId: number, identity: string): Promise<void>;
   onResolved(info: ResolvedInfo, seed: string, txHash: string): Promise<void>;
 }
 
@@ -66,7 +66,7 @@ export class Watcher {
     for (const log of await verifier.queryFilter(verifier.filters.Verified(), from, to)) {
       const { account, amount } = (log as ethers.EventLog).args as unknown as { account: string; amount: bigint };
       const match = this.service.handleVerified(account, amount);
-      if (match) await this.notifier.onVerified(match.telegramId, match.wallet);
+      if (match) await this.notifier.onVerified(match.identity, match.wallet);
     }
 
     // GiveawayCreated
@@ -86,8 +86,8 @@ export class Watcher {
     // Entered (on-chain entry mode)
     for (const log of await vault.queryFilter(vault.filters.Entered(), from, to)) {
       const a = (log as ethers.EventLog).args as unknown as { id: bigint; account: string };
-      const tid = this.service.handleEntered(Number(a.id), a.account);
-      if (tid && this.notifier.onEntered) await this.notifier.onEntered(Number(a.id), tid);
+      const identity = this.service.handleEntered(Number(a.id), a.account);
+      if (identity && this.notifier.onEntered) await this.notifier.onEntered(Number(a.id), identity);
     }
 
     // Resolved
@@ -95,8 +95,9 @@ export class Watcher {
       const a = (log as ethers.EventLog).args as unknown as {
         id: bigint; seed: string; winners: string[]; perWinner: bigint; leftoverToHost: bigint;
       };
-      const info = this.service.handleResolved(Number(a.id), a.winners, a.perWinner);
-      if (info) await this.notifier.onResolved(info, a.seed, (log as ethers.EventLog).transactionHash);
+      const txHash = (log as ethers.EventLog).transactionHash;
+      const info = this.service.handleResolved(Number(a.id), a.winners, a.perWinner, a.seed, txHash);
+      if (info) await this.notifier.onResolved(info, a.seed, txHash);
     }
   }
 }

@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { randomBytes } from "node:crypto";
 import type { FairSeatDB, GiveawayRow } from "./db.js";
 import type { Chain } from "./chain.js";
 import { config } from "./config.js";
@@ -13,18 +14,15 @@ export const RULE_LABEL: Record<number, string> = {
   2: "split equally among all",
 };
 
-// Entries close this many blocks before the draw block, so the off-chain set can be
-// committed on-chain before the seed (draw block) exists.
+// Entries close this many blocks before the draw block (fallback cushion), but the real
+// entry window is wall-clock. See prepareGiveaway for how the draw block is sized.
 export const COMMIT_WINDOW_BLOCKS = 15;
-// Seconds after entries close (wall clock) before the draw block is expected — leaves room
-// to commit the entrant set on-chain. Combined with a +20-block cushion, this keeps the
-// draw block safely AFTER the entry window even if blocks run a bit fast.
 const DRAW_DELAY_SEC = 20;
 const DRAW_SAFETY_BLOCKS = 20;
 
 export interface CreateParams {
-  creatorTelegramId: number;
-  chatId: number;
+  creatorIdentity: string;
+  chatId: number; // Telegram chat to announce in; 0 for web-only
   token: string; // ZeroAddress for native
   prizeWei: bigint;
   winnerCount: number;
@@ -42,7 +40,7 @@ export type EnterResult =
 
 export interface ResolvedInfo {
   giveaway: GiveawayRow;
-  winners: { address: string; telegramId?: number }[];
+  winners: { address: string; identity?: string }[];
   perWinnerWei: bigint;
 }
 
@@ -53,11 +51,11 @@ export class Service {
   ) {}
 
   // ---- verification ----
-  startVerification(telegramId: number): { alreadyVerified: boolean; wallet?: string; amountWei?: bigint } {
-    const existing = this.db.getUserByTelegram(telegramId);
+  startVerification(identity: string): { alreadyVerified: boolean; wallet?: string; amountWei?: bigint } {
+    const existing = this.db.getUser(identity);
     if (existing) return { alreadyVerified: true, wallet: existing.wallet };
     const amountWei = generateVerifyAmount(this.db);
-    this.db.createVerifySession(telegramId, amountWei.toString(), Date.now());
+    this.db.createVerifySession(identity, amountWei.toString(), Date.now());
     return { alreadyVerified: false, amountWei };
   }
 
@@ -65,16 +63,16 @@ export class Service {
     return matchVerification(this.db, account, amountWei, Date.now());
   }
 
-  walletOf(telegramId: number): string | undefined {
-    return this.db.getUserByTelegram(telegramId)?.wallet;
+  walletOf(identity: string): string | undefined {
+    return this.db.getUser(identity)?.wallet;
   }
 
   // ---- giveaway creation (the host signs the on-chain funding tx) ----
   async prepareGiveaway(
     p: CreateParams
   ): Promise<{ pendingId: number; drawBlock: number; tx: { to: string; value: string; data: string } } | { error: string }> {
-    const host = this.db.getUserByTelegram(p.creatorTelegramId);
-    if (!host) return { error: "You must verify first — send /verify to me in a private chat." };
+    const host = this.db.getUser(p.creatorIdentity);
+    if (!host) return { error: "You must verify first before creating a giveaway." };
     if (p.prizeWei <= 0n) return { error: "Prize must be greater than zero." };
     if (p.rule !== Rule.SplitEqually && p.winnerCount < 1) return { error: "Winner count must be at least 1." };
     if (p.scope === "private" && !p.accessKey) return { error: "A private giveaway needs an access key." };
@@ -83,13 +81,12 @@ export class Service {
 
     const now = await this.chain.blockNumber();
     const entriesCloseAt = Date.now() + p.durationSeconds * 1000;
-    // Place the draw block ~DRAW_DELAY_SEC after entries close, in blocks, plus cushions.
     const blocksUntilDraw =
       Math.ceil((p.durationSeconds + DRAW_DELAY_SEC) / config.blockTimeSec) + COMMIT_WINDOW_BLOCKS + DRAW_SAFETY_BLOCKS;
     const drawBlock = now + blocksUntilDraw;
 
     const pendingId = this.db.insertPendingCreation({
-      creator_telegram_id: p.creatorTelegramId,
+      creator_identity: p.creatorIdentity,
       host_wallet: host.wallet,
       chat_id: p.chatId,
       token: p.token,
@@ -108,12 +105,11 @@ export class Service {
     return { pendingId, drawBlock, tx };
   }
 
-  // Called when GiveawayCreated is seen on-chain → link to a pending creation and store it.
   handleGiveawayCreated(ev: {
     id: number; host: string; token: string; prize: bigint;
     winnerCount: number; rule: number; entryMode: number; drawBlock: number;
   }): GiveawayRow | null {
-    if (this.db.getGiveaway(ev.id)) return null; // already recorded
+    if (this.db.getGiveaway(ev.id)) return null;
     const pending = this.db.findMatchingPendingCreation(
       ev.host, ev.token, ev.prize.toString(), ev.winnerCount, ev.rule, ev.entryMode, ev.drawBlock
     );
@@ -121,7 +117,7 @@ export class Service {
     this.db.insertGiveaway({
       id: ev.id,
       chat_id: pending.chat_id,
-      creator_telegram_id: pending.creator_telegram_id,
+      creator_identity: pending.creator_identity,
       token: ev.token,
       prize_wei: ev.prize.toString(),
       winner_count: ev.winnerCount,
@@ -140,20 +136,20 @@ export class Service {
   // ---- entry ----
   async enterGiveaway(
     giveawayId: number,
-    telegramId: number,
+    identity: string,
     opts: { membershipOk: boolean; providedKey?: string }
   ): Promise<EnterResult> {
     const g = this.db.getGiveaway(giveawayId);
     if (!g || g.status !== "open") return { ok: false, reason: "not_open" };
 
-    const user = this.db.getUserByTelegram(telegramId);
+    const user = this.db.getUser(identity);
     if (!user) return { ok: false, reason: "not_verified" };
 
     if (g.scope === "members" && !opts.membershipOk) return { ok: false, reason: "not_member" };
     if (g.scope === "private" && (opts.providedKey ?? "") !== (g.access_key ?? "")) return { ok: false, reason: "wrong_key" };
 
     if (Date.now() >= g.entries_close_at) return { ok: false, reason: "closed" };
-    if (this.db.hasEntered(giveawayId, telegramId)) return { ok: false, reason: "already" };
+    if (this.db.hasEntered(giveawayId, identity)) return { ok: false, reason: "already" };
 
     if (g.entry_mode === EntryMode.OnChainEnter) {
       const iface = new ethers.Interface(["function enter(uint256 id)"]);
@@ -164,16 +160,16 @@ export class Service {
       };
     }
 
-    this.db.addEntry(giveawayId, telegramId, user.wallet, Date.now());
+    this.db.addEntry(giveawayId, identity, user.wallet, Date.now());
     return { ok: true, mode: "tap" };
   }
 
-  // Called when an on-chain Entered event is seen (OnChainEnter giveaways).
-  handleEntered(giveawayId: number, account: string): number | null {
+  // On-chain Entered event (OnChainEnter giveaways): record by wallet → identity.
+  handleEntered(giveawayId: number, account: string): string | null {
     const user = this.db.getUserByWallet(account);
     if (!user) return null;
-    this.db.addEntry(giveawayId, user.telegram_id, ethers.getAddress(account), Date.now());
-    return user.telegram_id;
+    this.db.addEntry(giveawayId, user.identity, ethers.getAddress(account), Date.now());
+    return user.identity;
   }
 
   // ---- scheduler: commit off-chain entrants, then trigger resolve ----
@@ -182,21 +178,15 @@ export class Service {
     const now = Date.now();
 
     for (const g of this.db.listOpenGiveaways()) {
-      // 1) Once entries have closed (wall clock) and before the draw block, commit the
-      //    off-chain-tap entrant set on-chain.
       if (g.entry_mode === EntryMode.OffChainTap && !g.committed && now >= g.entries_close_at && current < g.draw_block) {
         const entrants = this.db.getEntries(g.id).map((e) => e.wallet);
         if (entrants.length > 0) await this.chain.commitEntrants(g.id, entrants);
         this.db.setCommitted(g.id);
       }
-      // 2) Resolve after the draw block (the Resolved event drives result-posting).
       if (current > g.draw_block && (g.entry_mode === EntryMode.OnChainEnter || g.committed)) {
         await this.chain.resolve(g.id);
         this.db.setGiveawayStatus(g.id, "resolved");
       } else if (g.entry_mode === EntryMode.OffChainTap && !g.committed && current > g.draw_block) {
-        // Safety net: the commit window was missed (should not happen with correct block-time
-        // config). Resolve anyway so the locked prize can never get stuck — with no committed
-        // entrants the contract simply refunds the host.
         console.warn(`[scheduler] giveaway ${g.id} missed its commit window; resolving to free funds`);
         await this.chain.resolve(g.id);
         this.db.setGiveawayStatus(g.id, "resolved");
@@ -204,18 +194,75 @@ export class Service {
     }
   }
 
-  // Called when a Resolved event is seen → map winners to Telegram users for notifications.
-  handleResolved(id: number, winners: string[], perWinnerWei: bigint): ResolvedInfo | null {
+  // Resolved event → persist draw details and map winners to users for notifications.
+  handleResolved(id: number, winners: string[], perWinnerWei: bigint, seed: string, txHash: string): ResolvedInfo | null {
     const g = this.db.getGiveaway(id);
     if (!g) return null;
-    if (g.status !== "resolved") this.db.setGiveawayStatus(id, "resolved");
+    const checksummed = winners.map((w) => ethers.getAddress(w));
+    this.db.setResolvedInfo(id, seed, txHash, perWinnerWei.toString(), JSON.stringify(checksummed));
     return {
-      giveaway: g,
+      giveaway: this.db.getGiveaway(id)!,
       perWinnerWei,
-      winners: winners.map((w) => {
+      winners: checksummed.map((w) => {
         const u = this.db.getUserByWallet(w);
-        return { address: ethers.getAddress(w), telegramId: u?.telegram_id };
+        return { address: w, identity: u?.identity };
       }),
+    };
+  }
+
+  // ---- web-facing helpers (used by the HTTP API) ----
+  startWebVerification(): { token: string; amountWei: bigint; verifier: string } {
+    const token = randomBytes(16).toString("hex");
+    const r = this.startVerification(`web:${token}`);
+    return { token, amountWei: r.amountWei!, verifier: config.verifierAddress };
+  }
+  webStatus(token: string): { verified: boolean; wallet: string | null } {
+    const w = this.walletOf(`web:${token}`);
+    return { verified: !!w, wallet: w ?? null };
+  }
+
+  private toView(g: GiveawayRow) {
+    return {
+      id: g.id,
+      token: g.token,
+      prizeWei: g.prize_wei,
+      winnerCount: g.winner_count,
+      rule: g.rule,
+      ruleLabel: RULE_LABEL[g.rule],
+      scope: g.scope,
+      entryMode: g.entry_mode,
+      status: g.status,
+      entriesCloseAt: g.entries_close_at,
+      drawBlock: g.draw_block,
+      entryCount: this.db.countEntries(g.id),
+      winners: g.winners_json ? (JSON.parse(g.winners_json) as string[]) : null,
+      perWinnerWei: g.per_winner_wei,
+      seed: g.seed,
+      resolveTx: g.resolve_tx,
+    };
+  }
+  publicGiveaways() {
+    return this.db.listPublicGiveaways().map((g) => this.toView(g));
+  }
+  giveawayView(id: number, providedKey?: string) {
+    const g = this.db.getGiveaway(id);
+    if (!g) return null;
+    // Private giveaways are only viewable with the key.
+    if (g.scope === "private" && (providedKey ?? "") !== (g.access_key ?? "")) return { locked: true as const };
+    return this.toView(g);
+  }
+  drawView(id: number) {
+    const g = this.db.getGiveaway(id);
+    if (!g) return null;
+    return {
+      id,
+      rule: g.rule,
+      ruleLabel: RULE_LABEL[g.rule],
+      winnerCount: g.winner_count,
+      status: g.status,
+      entrants: this.db.getEntries(id).map((e) => e.wallet),
+      seed: g.seed,
+      winners: g.winners_json ? (JSON.parse(g.winners_json) as string[]) : null,
     };
   }
 }
