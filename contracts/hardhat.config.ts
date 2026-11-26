@@ -23,7 +23,11 @@ const config: HardhatUserConfig = {
       accounts,
     },
     bscMainnet: {
-      url: process.env.BSC_MAINNET_RPC || "https://bsc-rpc.publicnode.com",
+      // Default to the official BNB Chain dataseed. Some public nodes (e.g. publicnode)
+      // return a contract-creation tx's `to` as "" instead of null, which makes
+      // ethers v6 / hardhat-ethers throw BAD_DATA ("invalid value for value.to") while
+      // reading back the deploy tx. Override with BSC_MAINNET_RPC if needed.
+      url: process.env.BSC_MAINNET_RPC || "https://bsc-dataseed.bnbchain.org",
       chainId: 56,
       accounts,
     },
