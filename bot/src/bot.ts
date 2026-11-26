@@ -113,8 +113,16 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     if (durationSeconds === null) return void ctx.reply("duration like 30m, 2h, 1d.");
     const winnerCount = a.winners ? Number(a.winners) : 1;
 
+    const identity = idOf(ctx.from!.id);
+    const hostWallet = service.walletOf(identity);
+    if (!hostWallet) {
+      await ctx.reply("Verify first so I know which wallet funds the giveaway — DM me /verify.");
+      return;
+    }
+
     const prep = await service.prepareGiveaway({
-      creatorIdentity: idOf(ctx.from!.id),
+      creatorIdentity: identity,
+      hostWallet,
       chatId: ctx.chat.id,
       token: ethers.ZeroAddress,
       prizeWei: ethers.parseEther(String(amount)),

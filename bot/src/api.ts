@@ -82,8 +82,10 @@ export function startApi(service: Service, port: number): http.Server {
       }
       if (req.method === "POST" && path === "/api/prepare") {
         const b = await readBody(req);
+        if (!b.hostWallet) return json(res, 400, { error: "hostWallet (connected wallet address) is required" });
         const r = await service.prepareGiveaway({
-          creatorIdentity: `web:${b.token}`,
+          creatorIdentity: `web:${String(b.hostWallet).toLowerCase()}`,
+          hostWallet: b.hostWallet,
           chatId: 0,
           token: b.tokenAddress || ethers.ZeroAddress,
           prizeWei: ethers.parseEther(String(b.amount)),

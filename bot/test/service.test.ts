@@ -69,7 +69,7 @@ test("create → GiveawayCreated links back to the pending config", async () => 
   svc.handleVerified(WALLET_A, svc.startVerification(HOST).amountWei!);
 
   const prep = await svc.prepareGiveaway({
-    creatorIdentity: HOST, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
+    creatorIdentity: HOST, hostWallet: WALLET_A, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
     winnerCount: 2, rule: Rule.Random, entryMode: EntryMode.OffChainTap, scope: "public", accessKey: null, durationSeconds: 3600,
   });
   assert.ok(!("error" in prep));
@@ -93,7 +93,7 @@ test("entry gates: verified required, dedupe, scope, access key", async () => {
 
   svc.handleVerified(WALLET_A, svc.startVerification(HOST).amountWei!);
   const prep = await svc.prepareGiveaway({
-    creatorIdentity: HOST, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
+    creatorIdentity: HOST, hostWallet: WALLET_A, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
     winnerCount: 1, rule: Rule.FirstN, entryMode: EntryMode.OffChainTap, scope: "public", accessKey: null, durationSeconds: 3600,
   });
   const drawBlock = (prep as { drawBlock: number }).drawBlock;
@@ -106,7 +106,7 @@ test("entry gates: verified required, dedupe, scope, access key", async () => {
   assert.deepEqual(await svc.enterGiveaway(1, USER, { membershipOk: true }), { ok: false, reason: "already" });
 
   const prep2 = await svc.prepareGiveaway({
-    creatorIdentity: HOST, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
+    creatorIdentity: HOST, hostWallet: WALLET_A, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
     winnerCount: 1, rule: Rule.FirstN, entryMode: EntryMode.OffChainTap, scope: "private", accessKey: "SECRET", durationSeconds: 3600,
   });
   const draw2 = (prep2 as { drawBlock: number }).drawBlock;
@@ -123,7 +123,7 @@ test("entries close by wall clock", async () => {
   const svc = new Service(db, new FakeChain() as unknown as Chain);
   svc.handleVerified(WALLET_A, svc.startVerification(HOST).amountWei!);
   const prep = await svc.prepareGiveaway({
-    creatorIdentity: HOST, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
+    creatorIdentity: HOST, hostWallet: WALLET_A, chatId: -100, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
     winnerCount: 1, rule: Rule.FirstN, entryMode: EntryMode.OffChainTap, scope: "public", accessKey: null, durationSeconds: 0,
   });
   const drawBlock = (prep as { drawBlock: number }).drawBlock;

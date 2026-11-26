@@ -22,6 +22,7 @@ const DRAW_SAFETY_BLOCKS = 20;
 
 export interface CreateParams {
   creatorIdentity: string;
+  hostWallet: string; // the address that will fund + lock the prize (needn't hold an Agent ID)
   chatId: number; // Telegram chat to announce in; 0 for web-only
   token: string; // ZeroAddress for native
   prizeWei: bigint;
@@ -71,8 +72,12 @@ export class Service {
   async prepareGiveaway(
     p: CreateParams
   ): Promise<{ pendingId: number; drawBlock: number; tx: { to: string; value: string; data: string } } | { error: string }> {
-    const host = this.db.getUser(p.creatorIdentity);
-    if (!host) return { error: "You must verify first before creating a giveaway." };
+    let hostWallet: string;
+    try {
+      hostWallet = ethers.getAddress(p.hostWallet);
+    } catch {
+      return { error: "A valid host wallet address is required." };
+    }
     if (p.prizeWei <= 0n) return { error: "Prize must be greater than zero." };
     if (p.rule !== Rule.SplitEqually && p.winnerCount < 1) return { error: "Winner count must be at least 1." };
     if (p.scope === "private" && !p.accessKey) return { error: "A private giveaway needs an access key." };
@@ -87,7 +92,7 @@ export class Service {
 
     const pendingId = this.db.insertPendingCreation({
       creator_identity: p.creatorIdentity,
-      host_wallet: host.wallet,
+      host_wallet: hostWallet,
       chat_id: p.chatId,
       token: p.token,
       prize_wei: p.prizeWei.toString(),
@@ -263,6 +268,7 @@ export class Service {
       entrants: this.db.getEntries(id).map((e) => e.wallet),
       seed: g.seed,
       winners: g.winners_json ? (JSON.parse(g.winners_json) as string[]) : null,
+      resolveTx: g.resolve_tx,
     };
   }
 }
