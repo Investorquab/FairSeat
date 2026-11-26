@@ -189,6 +189,20 @@ describe("GiveawayVault", () => {
     expect(await token.balanceOf(b.address)).to.equal(ethers.parseUnits("50", 18));
   });
 
+  it("resolves even if very late (>256 blocks) via fallback seed — funds never stuck", async () => {
+    const { vault, host, operator, a, b, resolver } = await deploy();
+    const prize = ethers.parseEther("2");
+    const drawBlock = (await currentBlock()) + 4n;
+    await vault
+      .connect(host)
+      .createGiveaway(ethers.ZeroAddress, prize, 1, Rule.Random, EntryMode.OffChainTap, drawBlock, { value: prize });
+    await (await vault.connect(operator).commitEntrants(1, [a.address, b.address])).wait();
+
+    await mine(300); // far more than 256 blocks past drawBlock → primary blockhash is gone
+    await expect(vault.connect(resolver).resolve(1)).to.emit(vault, "Resolved");
+    expect(await ethers.provider.getBalance(await vault.getAddress())).to.equal(0n);
+  });
+
   it("no entrants → full refund to host", async () => {
     const { vault, host, resolver } = await deploy();
     const prize = ethers.parseEther("1");

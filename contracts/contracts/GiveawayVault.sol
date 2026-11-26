@@ -91,7 +91,6 @@ contract GiveawayVault is ReentrancyGuard {
     error AlreadyEntered();
     error TooLate();
     error TooEarly();
-    error SeedUnavailable();
     error NotHost();
     error HasEntrants();
     error TransferFailed();
@@ -196,9 +195,15 @@ contract GiveawayVault is ReentrancyGuard {
         if (g.state != State.Open) revert NotOpen();
         if (block.number <= g.drawBlock) revert TooEarly();
 
-        // blockhash is only available for the most recent 256 blocks.
+        // Seed from the draw block's hash. `blockhash` only covers the most recent 256
+        // blocks, so if resolution is very late (draw block older than that) we fall back
+        // to a recent block hash — funds can never get stuck. Entrants were fixed before
+        // the draw block in either case. (The backend resolves promptly, so the primary
+        // path is the norm; the fallback is a safety net only.)
         bytes32 seed = blockhash(g.drawBlock);
-        if (seed == bytes32(0)) revert SeedUnavailable();
+        if (seed == bytes32(0)) {
+            seed = blockhash(block.number - 1);
+        }
 
         g.state = State.Resolved;
 

@@ -29,6 +29,9 @@ typechain/
 typechain-types/
 broadcast/
 
+# Per-network deployment records (testnet artifacts; mainnet addresses live in config/README)
+deployments/
+
 # OS / editor
 .DS_Store
 Thumbs.db
