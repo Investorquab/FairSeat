@@ -1,4 +1,5 @@
 import { Bot, InlineKeyboard } from "grammy";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import { ethers } from "ethers";
 import type { Chain } from "./chain.js";
 import type { Service, ResolvedInfo } from "./service.js";
@@ -34,7 +35,11 @@ function kv(args: string): Record<string, string> {
 }
 
 export function createBot(service: Service, chain: Chain): { bot: Bot; notifier: Notifier } {
-  const bot = new Bot(config.botToken);
+  // grammY uses node-fetch, which ignores the proxy env. In this sandbox we route it
+  // through the agent proxy; on a normal VPS `http_proxy` is unset and this is a no-op.
+  const proxy = process.env.http_proxy || process.env.HTTPS_PROXY;
+  const agent = proxy ? new HttpsProxyAgent(proxy) : undefined;
+  const bot = new Bot(config.botToken, agent ? { client: { baseFetchConfig: { agent } } } : undefined);
 
   bot.command("start", async (ctx) => {
     await ctx.reply(
