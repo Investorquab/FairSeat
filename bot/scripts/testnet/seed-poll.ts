@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
-import { FairSeatDB } from "../src/db.js";
-import { Chain } from "../src/chain.js";
-import { Service, VoteMode } from "../src/service.js";
+import { FairSeatDB } from "../../src/db.js";
+import { Chain } from "../../src/chain.js";
+import { Service, VoteMode } from "../../src/service.js";
 const db = new FairSeatDB(process.env.DB_PATH || "./fairseat.db");
 const chain = new Chain();
 const svc = new Service(db, chain);

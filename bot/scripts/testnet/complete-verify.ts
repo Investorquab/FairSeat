@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { ethers } from "ethers";
-import { Chain } from "../src/chain.js";
-import { config } from "../src/config.js";
+import { Chain } from "../../src/chain.js";
+import { config } from "../../src/config.js";
 
 const db = new DatabaseSync("./fairseat.db");
 const row = db.prepare("SELECT * FROM verify_sessions WHERE status='pending' ORDER BY id DESC LIMIT 1").get() as any;

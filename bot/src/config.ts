@@ -1,11 +1,12 @@
 import "dotenv/config";
 
-const chainId = Number(process.env.CHAIN_ID ?? "97");
+// Defaults to BNB Chain mainnet (56); set CHAIN_ID=97 + a testnet RPC in .env to run on testnet.
+const chainId = Number(process.env.CHAIN_ID ?? "56");
 
 export const config = {
   botToken: process.env.BOT_TOKEN ?? "",
   chainId,
-  rpcUrl: process.env.RPC_URL ?? "https://bsc-testnet-rpc.publicnode.com",
+  rpcUrl: process.env.RPC_URL ?? (chainId === 56 ? "https://bsc-rpc.publicnode.com" : "https://bsc-testnet-rpc.publicnode.com"),
   registryAddress: process.env.REGISTRY_ADDRESS ?? "",
   verifierAddress: process.env.VERIFIER_ADDRESS ?? "",
   vaultAddress: process.env.VAULT_ADDRESS ?? "",

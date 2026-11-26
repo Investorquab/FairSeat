@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { ethers } from "ethers";
-import { Chain } from "../src/chain.js";
+import { Chain } from "../../src/chain.js";
 
 const db = new DatabaseSync("./fairseat.db");
 const p = db.prepare("SELECT * FROM pending_creations WHERE matched=0 ORDER BY id DESC LIMIT 1").get() as any;

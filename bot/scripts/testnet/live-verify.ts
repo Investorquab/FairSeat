@@ -2,11 +2,11 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ethers } from "ethers";
-import { FairSeatDB } from "../src/db.js";
-import { Chain } from "../src/chain.js";
-import { Service } from "../src/service.js";
-import { Watcher, type Notifier } from "../src/watcher.js";
-import { config } from "../src/config.js";
+import { FairSeatDB } from "../../src/db.js";
+import { Chain } from "../../src/chain.js";
+import { Service } from "../../src/service.js";
+import { Watcher, type Notifier } from "../../src/watcher.js";
+import { config } from "../../src/config.js";
 
 async function main() {
   const db = new FairSeatDB(join(tmpdir(), `fairseat-live-${Date.now()}.db`));

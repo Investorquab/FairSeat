@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
-import { FairSeatDB } from "../src/db.js";
-import { Chain } from "../src/chain.js";
-import { Service } from "../src/service.js";
+import { FairSeatDB } from "../../src/db.js";
+import { Chain } from "../../src/chain.js";
+import { Service } from "../../src/service.js";
 
 // Seed a few public giveaways on testnet so the website has content (funds from the operator).
 const db = new FairSeatDB(process.env.DB_PATH || "./fairseat.db");

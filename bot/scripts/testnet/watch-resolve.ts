@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { ethers } from "ethers";
-import { Chain } from "../src/chain.js";
-import { config } from "../src/config.js";
+import { Chain } from "../../src/chain.js";
+import { config } from "../../src/config.js";
 const id = 5;
 const db = new DatabaseSync("./fairseat.db");
 const chain = new Chain();
