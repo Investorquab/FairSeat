@@ -61,7 +61,7 @@ they are never deployed to mainnet (the deploy script uses the real registry on 
 
 | Network | Registry | Verifier | GiveawayVault | Poll | BatchDistributor |
 | --- | --- | --- | --- | --- | --- |
-| BNB mainnet (56) | `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F` | `TBD` | `TBD` | `TBD` | `TBD` |
+| BNB mainnet (56) | `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F` | `0xa065A7F4b10Ef6895Ae38474DaD569daDc459E2B` | `0xC5c13aED4762e556608E0A064c0F759b08d20292` | `0x45bBef44cDAabaB4ae3D730f22fb5Cc737eDA5cc` | `0x1d7Fda5578fc1b36Bd7A8542bEe44d3b6e033e39` |
 
 ## Owner permissions (disclosed)
 
