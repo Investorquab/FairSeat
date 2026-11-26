@@ -26,10 +26,8 @@ function Header({ route }: { route: string }) {
         <a href="#/" className="brand">
           <span className="seat">◧</span>
           <span>
-            FairSeat<span className="full" style={{ color: "var(--muted)", fontWeight: 500, fontSize: 13 }}>
-              {" "}
-              · one seat
-            </span>
+            FairSeat
+            <span className="tagline" style={{ color: "var(--muted)", fontWeight: 500, fontSize: 13 }}> · one seat</span>
           </span>
         </a>
         <nav className="nav">
