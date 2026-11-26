@@ -6,7 +6,10 @@ const chainId = Number(process.env.CHAIN_ID ?? "56");
 export const config = {
   botToken: process.env.BOT_TOKEN ?? "",
   chainId,
-  rpcUrl: process.env.RPC_URL ?? (chainId === 56 ? "https://bsc-dataseed.bnbchain.org" : "https://bsc-testnet-rpc.publicnode.com"),
+  // Backend default is publicnode: the watcher relies on eth_getLogs (bsc-dataseed throttles it),
+  // and unlike the deploy step the backend never creates contracts, so publicnode's contract-creation
+  // `to:""` quirk never applies here. Override with RPC_URL. (Hardhat deploy uses dataseed instead.)
+  rpcUrl: process.env.RPC_URL ?? (chainId === 56 ? "https://bsc-rpc.publicnode.com" : "https://bsc-testnet-rpc.publicnode.com"),
   registryAddress: process.env.REGISTRY_ADDRESS ?? "",
   verifierAddress: process.env.VERIFIER_ADDRESS ?? "",
   vaultAddress: process.env.VAULT_ADDRESS ?? "",
