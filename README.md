@@ -1,8 +1,10 @@
 # FairSeat, one Agent ID, one seat
 
-**Participation infrastructure for [Binance Agent ID](https://bscscan.com/address/0x60B9262456dE011F7d15a54CdD8c48bAaa8B022f) holders on BNB Chain.** Each Agent ID counts exactly once in giveaways, votes and payouts. Prizes are locked on-chain, winners are drawn provably-fair, and anyone can check the result. No sign-ups, no multi-wallet farming.
+**Fair giveaways, votes and payouts on BNB Chain, where every [Binance Agent ID](https://bscscan.com/address/0x60B9262456dE011F7d15a54CdD8c48bAaa8B022f) counts exactly once.**
 
-Built for the **Binance Wallet x BNB Chain Agent ID Hackathon**. Live on BNB Chain mainnet (chain 56).
+Online giveaways reward whoever owns the most wallets, not the community you actually want to reach. A Binance Agent ID is one per account and can't be transferred, so FairSeat gives each one a single seat: fifty wallets can no longer take fifty entries, fifty votes, or fifty payouts. Prizes are locked on-chain, winners are drawn provably-fair, and anyone can recompute the result. No sign-ups, no wallet-connect, no farming.
+
+Live on BNB Chain mainnet (chain 56). Built for the **Binance Wallet x BNB Chain Agent ID Hackathon**.
 
 **Try it:** [fairseat.185-7-81-139.sslip.io](https://fairseat.185-7-81-139.sslip.io) · **Telegram:** [@getfairseat_bot](https://t.me/getfairseat_bot)
 
