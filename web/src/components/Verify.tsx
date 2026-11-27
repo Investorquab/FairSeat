@@ -5,14 +5,26 @@ import { shortAddr } from "../lib";
 
 const TOKEN_KEY = "fairseat_web_token";
 const WALLET_KEY = "fairseat_web_wallet";
+const SEATKEY_KEY = "fairseat_seat_key";
 
-export function getWebIdentity(): { token: string; wallet: string } | null {
+export function getWebIdentity(): { token: string; wallet: string; seatKey: string } | null {
   try {
     const token = localStorage.getItem(TOKEN_KEY);
     const wallet = localStorage.getItem(WALLET_KEY);
-    return token && wallet ? { token, wallet } : null;
+    const seatKey = localStorage.getItem(SEATKEY_KEY) ?? "";
+    return token && wallet ? { token, wallet, seatKey } : null;
   } catch {
     return null;
+  }
+}
+
+function persistIdentity(token: string, wallet: string, seatKey: string | null) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(WALLET_KEY, wallet);
+    if (seatKey) localStorage.setItem(SEATKEY_KEY, seatKey);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -61,13 +73,8 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
         const st = await api.verifyStatus(s.token);
         if (st.verified && st.wallet) {
           window.clearInterval(poll.current!);
-          try {
-            localStorage.setItem(TOKEN_KEY, s.token);
-            localStorage.setItem(WALLET_KEY, st.wallet);
-          } catch {
-            /* ignore */
-          }
-          setIdentity({ token: s.token, wallet: st.wallet });
+          persistIdentity(s.token, st.wallet, st.seatKey);
+          setIdentity({ token: s.token, wallet: st.wallet, seatKey: st.seatKey ?? "" });
         }
       }, 4000);
     } catch (e) {
@@ -78,21 +85,16 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
   }
 
   async function doRestore() {
-    const token = restore.trim();
+    const seatKey = restore.trim();
     setRestoreErr("");
-    if (!token) return;
+    if (!seatKey) return;
     try {
-      const st = await api.verifyStatus(token);
-      if (st.verified && st.wallet) {
-        try {
-          localStorage.setItem(TOKEN_KEY, token);
-          localStorage.setItem(WALLET_KEY, st.wallet);
-        } catch {
-          /* ignore */
-        }
-        setIdentity({ token, wallet: st.wallet });
+      const r = await api.verifyRestore(seatKey);
+      if (r.token && r.wallet) {
+        persistIdentity(r.token, r.wallet, r.seatKey ?? seatKey);
+        setIdentity({ token: r.token, wallet: r.wallet, seatKey: r.seatKey ?? seatKey });
       } else {
-        setRestoreErr("That seat key isn't verified yet. Check it, or verify below.");
+        setRestoreErr("That seat key wasn't found. Check it, or verify below.");
       }
     } catch (e) {
       setRestoreErr((e as Error).message);
@@ -109,16 +111,18 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
           </div>
           <span className="badge badge-open">✓ verified</span>
         </div>
-        <details className="guide">
-          <summary>Use your seat on another device</summary>
-          <div className="small muted" style={{ marginTop: 8 }}>
-            Copy your seat key and paste it into "Restore" on the other device. Keep it private: it is your seat (entries and votes only, never funds).
-          </div>
-          <div className="code" style={{ marginTop: 8 }}>
-            <span className="mono">{identity.token}</span>
-            <Copy text={identity.token} />
-          </div>
-        </details>
+        {identity.seatKey && (
+          <details className="guide">
+            <summary>Use your seat on another device</summary>
+            <div className="small muted" style={{ marginTop: 8 }}>
+              Copy your seat key and paste it under "Already verified" on the other device, or send it to the Telegram bot as <span className="mono">/restore &lt;key&gt;</span>. Keep it private: it is your seat (entries and votes only, never funds).
+            </div>
+            <div className="code" style={{ marginTop: 8 }}>
+              <span className="mono">{identity.seatKey}</span>
+              <Copy text={identity.seatKey} />
+            </div>
+          </details>
+        )}
       </div>
     );
   }

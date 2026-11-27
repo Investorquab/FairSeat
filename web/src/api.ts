@@ -54,8 +54,10 @@ export const api = {
   draw: (id: number): Promise<any> => get(`/api/draw/${id}`),
   verifyStart: (): Promise<{ token: string; amount: string; amountWei: string; verifier: string; nativeSymbol: string }> =>
     post("/api/verify/start"),
-  verifyStatus: (token: string): Promise<{ verified: boolean; wallet: string | null }> =>
+  verifyStatus: (token: string): Promise<{ verified: boolean; wallet: string | null; seatKey: string | null }> =>
     get(`/api/verify/status?token=${token}`),
+  verifyRestore: (seatKey: string): Promise<{ token?: string; wallet?: string; seatKey?: string; error?: string }> =>
+    post("/api/verify/restore", { seatKey }),
   enter: (id: number, token: string, key?: string): Promise<any> => post(`/api/giveaways/${id}/enter`, { token, key }),
   prepare: (b: Record<string, unknown>): Promise<any> => post("/api/prepare", b),
   polls: (): Promise<{ polls: PollView[] }> => get("/api/polls"),

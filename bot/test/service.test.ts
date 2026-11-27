@@ -159,18 +159,45 @@ test("handleResolved maps winners to user identities", () => {
   rmSync(path, { force: true });
 });
 
-test("one wallet = one seat: re-binding a wallet to a new identity never throws (F-3)", () => {
+test("one seat (wallet) can carry several identities, with a stable seat key (F-3)", () => {
   const { db, path } = freshDb();
   const now = Date.now();
   db.bindUser("tg:1", WALLET_A, now);
-  // Re-point the same wallet to a new identity (e.g. Telegram → web) - must not throw.
+  // The same wallet bound under a second identity (Telegram + web) is additive, never a throw.
   db.bindUser("web:x", WALLET_A, now);
   assert.equal(db.getUser("web:x")?.wallet, WALLET_A);
-  assert.equal(db.getUser("tg:1"), undefined); // old identity dropped; still one seat
-  assert.equal(db.getUserByWallet(WALLET_A)?.identity, "web:x");
+  assert.equal(db.getUser("tg:1")?.wallet, WALLET_A); // both identities share one seat
+  const key = db.seatKeyOf(WALLET_A);
+  assert.ok(key); // a stable seat key exists
+  assert.equal(db.walletBySeatKey(key!), WALLET_A);
   // Reusing a past amount across sessions must not throw (no global UNIQUE anymore).
   db.createVerifySession("tg:2", "12345", now);
   db.createVerifySession("tg:3", "12345", now);
+  db.close();
+  rmSync(path, { force: true });
+});
+
+test("seat key restores a seat on another identity, and one wallet still gets one seat", async () => {
+  const { db, path } = freshDb();
+  const svc = new Service(db, new FakeChain() as unknown as Chain);
+  // Verify a wallet on a web device.
+  svc.handleVerified(WALLET_A, svc.startVerification("web:dev1").amountWei!);
+  const key = svc.seatKeyForIdentity("web:dev1");
+  assert.ok(key);
+  // Restore the same seat on Telegram with the key (no re-verify).
+  const linked = svc.linkSeat("tg:99", key!);
+  assert.deepEqual(linked, { wallet: WALLET_A });
+  assert.equal(svc.walletOf("tg:99"), WALLET_A);
+
+  // The same seat cannot enter one giveaway twice through its two identities.
+  const prep = await svc.prepareGiveaway({
+    creatorIdentity: "web:dev1", hostWallet: WALLET_A, chatId: 0, token: ethers.ZeroAddress, prizeWei: ethers.parseEther("1"),
+    winnerCount: 1, rule: Rule.FirstN, entryMode: EntryMode.OffChainTap, scope: "public", accessKey: null, durationSeconds: 3600,
+  });
+  const drawBlock = (prep as { drawBlock: number }).drawBlock;
+  svc.handleGiveawayCreated({ id: 1, host: WALLET_A, token: ethers.ZeroAddress, prize: ethers.parseEther("1"), winnerCount: 1, rule: Rule.FirstN, entryMode: EntryMode.OffChainTap, drawBlock });
+  assert.deepEqual(await svc.enterGiveaway(1, "web:dev1", { membershipOk: true }), { ok: true, mode: "tap" });
+  assert.deepEqual(await svc.enterGiveaway(1, "tg:99", { membershipOk: true }), { ok: false, reason: "already" });
   db.close();
   rmSync(path, { force: true });
 });

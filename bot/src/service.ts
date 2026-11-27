@@ -169,7 +169,9 @@ export class Service {
     if (g.scope === "private" && (opts.providedKey ?? "") !== (g.access_key ?? "")) return { ok: false, reason: "wrong_key" };
 
     if (Date.now() >= g.entries_close_at) return { ok: false, reason: "closed" };
-    if (this.db.hasEntered(giveawayId, identity)) return { ok: false, reason: "already" };
+    // One seat per wallet: block whether this identity or any other identity of the same seat entered.
+    if (this.db.hasEntered(giveawayId, identity) || this.db.hasEnteredWallet(giveawayId, user.wallet))
+      return { ok: false, reason: "already" };
 
     if (g.entry_mode === EntryMode.OnChainEnter) {
       const iface = new ethers.Interface(["function enter(uint256 id)"]);
@@ -236,9 +238,30 @@ export class Service {
     const r = this.startVerification(`web:${token}`);
     return { token, amountWei: r.amountWei!, verifier: config.verifierAddress };
   }
-  webStatus(token: string): { verified: boolean; wallet: string | null } {
+  webStatus(token: string): { verified: boolean; wallet: string | null; seatKey: string | null } {
     const w = this.walletOf(`web:${token}`);
-    return { verified: !!w, wallet: w ?? null };
+    return { verified: !!w, wallet: w ?? null, seatKey: w ? this.db.seatKeyOf(w) ?? null : null };
+  }
+
+  // The stable seat key for whichever seat an identity belongs to.
+  seatKeyForIdentity(identity: string): string | undefined {
+    const w = this.walletOf(identity);
+    return w ? this.db.seatKeyOf(w) : undefined;
+  }
+  // Restore a seat on a new surface/device by its seat key: bind this identity to that seat.
+  linkSeat(identity: string, seatKey: string): { wallet: string } | null {
+    const wallet = this.db.walletBySeatKey(seatKey.trim());
+    if (!wallet) return null;
+    this.db.bindUser(identity, wallet, Date.now());
+    return { wallet };
+  }
+  // Web restore: mint a fresh web identity bound to the seat and return its token.
+  restoreWeb(seatKey: string): { token: string; wallet: string; seatKey: string } | null {
+    const wallet = this.db.walletBySeatKey(seatKey.trim());
+    if (!wallet) return null;
+    const token = randomBytes(16).toString("hex");
+    this.db.bindUser(`web:${token}`, wallet, Date.now());
+    return { token, wallet, seatKey: seatKey.trim() };
   }
 
   private toView(g: GiveawayRow) {
@@ -336,7 +359,9 @@ export class Service {
     const numOptions = (JSON.parse(poll.options_json) as string[]).length;
     if (option < 0 || option >= numOptions) return { ok: false, reason: "bad_option" };
     if (Date.now() >= poll.entries_close_at) return { ok: false, reason: "closed" };
-    if (this.db.hasVoted(pollId, identity)) return { ok: false, reason: "already" };
+    // One seat per wallet: block this identity or any other identity of the same seat.
+    if (this.db.hasVoted(pollId, identity) || this.db.hasVotedWallet(pollId, user.wallet))
+      return { ok: false, reason: "already" };
 
     if (poll.mode === VoteMode.OnChainVote) {
       const iface = new ethers.Interface(["function vote(uint256 id, uint8 option)"]);

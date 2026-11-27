@@ -150,6 +150,41 @@ export function Landing() {
         </section>
       )}
 
+      <section className="section">
+        <div className="wrap">
+          <div className="section-head">
+            <h2>Questions</h2>
+            <p>The short version: one Agent ID, one seat, and you stay in control.</p>
+          </div>
+          <div className="faq">
+            <details className="guide">
+              <summary>I verified on my phone. Will it know me on my computer?</summary>
+              <p>On Telegram, yes automatically: your seat is tied to your Telegram account, so any device you are signed into already works. On the website, verifying once gives you a private <b>seat key</b>. Paste it under "Already verified on another device" on the new device (or send it to the bot as <span className="mono">/restore &lt;key&gt;</span>) and your seat moves over instantly, with no re-verifying.</p>
+            </details>
+            <details className="guide">
+              <summary>Do I connect a wallet or sign anything?</summary>
+              <p>No. You never connect a wallet, sign a message, or hand over a key. You verify by making one tiny transfer yourself, and you confirm every action in your own wallet.</p>
+            </details>
+            <details className="guide">
+              <summary>What does verifying cost?</summary>
+              <p>Almost nothing. You send a tiny amount of BNB (a fraction of a cent) to the verifier, and it is refunded. You only pay the network's gas fee for the transfer.</p>
+            </details>
+            <details className="guide">
+              <summary>Can someone with lots of wallets win more often?</summary>
+              <p>No. Every entry, vote and payout is counted once per Agent ID, checked on-chain. A second wallet gets no second seat. The one limit: this is as strong as Binance's own KYC, so it cannot stop someone running several real Binance accounts.</p>
+            </details>
+            <details className="guide">
+              <summary>Can FairSeat take the prize money?</summary>
+              <p>No. A giveaway's prize is locked in a contract with no owner who can withdraw it. It can only go to winners who hold an Agent ID, or back to the host. Every contract is open-source and verified on BscScan.</p>
+            </details>
+            <details className="guide">
+              <summary>How are winners chosen, and can I check?</summary>
+              <p>Random winners come from a future block hash, with the entrant list fixed before that block exists, so the draw cannot be re-rolled. Anyone can recompute the winners on the <a className="link" href="#/check">Check a draw</a> page.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
       <footer className="footer">
         <div className="wrap foot-row">
           <div className="brand"><span className="seatmark" /> FairSeat</div>

@@ -20,6 +20,8 @@ const SITE = process.env.SITE_URL || "https://fairseat.185-7-81-139.sslip.io";
 const COMMAND_MENU = [
   { command: "verify", description: "Prove you hold a Binance Agent ID (DM me)" },
   { command: "mystatus", description: "Check your verification" },
+  { command: "mykey", description: "Get your seat key (to use your seat elsewhere)" },
+  { command: "restore", description: "Restore your seat here with your seat key" },
   { command: "giveaway", description: "Admins: launch a locked, provably-fair giveaway" },
   { command: "poll", description: "Admins: start a one Agent ID, one vote poll" },
   { command: "enter", description: "Enter the current giveaway" },
@@ -125,10 +127,49 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
   });
 
   bot.command("mystatus", async (ctx) => {
-    const w = service.walletOf(idOf(ctx.from!.id));
-    await ctx.reply(w ? `✅ Verified. Wallet: \`${w}\`` : "Not verified yet. Send /verify in a private chat.", {
-      parse_mode: "Markdown",
-    });
+    const id = idOf(ctx.from!.id);
+    const w = service.walletOf(id);
+    if (!w) {
+      await ctx.reply("Not verified yet. Send /verify in a private chat.");
+      return;
+    }
+    const key = service.seatKeyForIdentity(id);
+    await ctx.reply(
+      `✅ Verified.\nWallet: \`${w}\`` + (key ? `\n\nSeat key: \`${key}\`\nUse /mykey to copy it, or /restore it on another device.` : ""),
+      { parse_mode: "Markdown" }
+    );
+  });
+
+  // /mykey - show your seat key so you can use your seat on another device or the website.
+  bot.command("mykey", async (ctx) => {
+    const key = service.seatKeyForIdentity(idOf(ctx.from!.id));
+    if (!key) {
+      await ctx.reply("You're not verified yet. Send /verify in a private chat first.");
+      return;
+    }
+    await ctx.reply(
+      "🔑 *Your seat key*\n\n" +
+        `\`${key}\`\n\n` +
+        "Bring your seat to another device or the website with this key: send `/restore " +
+        "<key>` to me there, or paste it on the site under \"Already verified on another device\". " +
+        "Keep it private: it is your seat (entries and votes only, never funds).",
+      { parse_mode: "Markdown" }
+    );
+  });
+
+  // /restore <seat key> - bind this Telegram account to an existing seat.
+  bot.command("restore", async (ctx) => {
+    const arg = (ctx.match?.toString() ?? "").trim();
+    if (!arg) {
+      await ctx.reply("Send your seat key: `/restore <your seat key>`", { parse_mode: "Markdown" });
+      return;
+    }
+    const r = service.linkSeat(idOf(ctx.from!.id), arg);
+    if (!r) {
+      await ctx.reply("That seat key wasn't found. Check it, or send /verify to create one.");
+      return;
+    }
+    await ctx.reply(`✅ Seat restored on this account.\nWallet: \`${r.wallet}\``, { parse_mode: "Markdown" });
   });
 
   // /giveaway amount=0.01 winners=3 rule=random scope=public duration=60m [entry=tap|onchain] [key=SECRET]

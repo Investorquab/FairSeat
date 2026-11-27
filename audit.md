@@ -81,6 +81,13 @@ Production should also rate-limit at the reverse proxy (see `docs/DEPLOY.md`).
 
 ## Hardening also applied
 - `createGiveaway` marked `nonReentrant` (defensive; `resolve`/`cancel`/`distribute` already were).
+- Identity model (post-audit change): a seat (wallet) may now carry several identities (web +
+  Telegram) so a verified user works across devices and surfaces. The F-3 re-point was replaced by
+  additive binding, and "one Agent ID, one seat" is now enforced **per wallet** at entry and vote
+  (`hasEnteredWallet` / `hasVotedWallet`), covered by a regression test ("seat key restores a seat on
+  another identity, and one wallet still gets one seat"). A per-wallet seat key lets a user restore
+  their seat on another device without re-verifying; it authorizes entries and votes only, never
+  funds. The DB migration that drops the old `UNIQUE(wallet)` is guarded by `PRAGMA user_version`.
 
 ## Not tested / residual
 - No third-party/independent audit; no formal verification; no fuzzing campaign.

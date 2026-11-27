@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+import { randomBytes } from "node:crypto";
 
 // Minimal typed wrapper around the local SQLite store.
 // A "user" is keyed by a generic IDENTITY string so the same engine serves multiple surfaces:
@@ -114,14 +115,50 @@ export class FairSeatDB {
     this.db = new DatabaseSync(path);
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.migrate();
+    this.migrateIdentityModel();
+  }
+
+  // One seat (wallet) may now carry several identities (web + Telegram). Databases created under the
+  // old schema had UNIQUE(wallet) and re-pointed; rebuild the table without that constraint, and give
+  // every existing wallet a stable seat key. Runs once (guarded by PRAGMA user_version).
+  private migrateIdentityModel(): void {
+    const row = this.db.prepare("PRAGMA user_version").get() as { user_version?: number } | undefined;
+    if (Number(row?.user_version ?? 0) < 2) {
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS users_v2 (
+          identity TEXT PRIMARY KEY, wallet TEXT NOT NULL, verified_at INTEGER NOT NULL
+        );
+        INSERT OR IGNORE INTO users_v2 (identity, wallet, verified_at)
+          SELECT identity, wallet, verified_at FROM users;
+        DROP TABLE users;
+        ALTER TABLE users_v2 RENAME TO users;
+        CREATE INDEX IF NOT EXISTS idx_users_wallet ON users(wallet);
+        PRAGMA user_version = 2;
+      `);
+    }
+    const now = Date.now();
+    const missing = this.db
+      .prepare("SELECT DISTINCT wallet FROM users WHERE wallet NOT IN (SELECT wallet FROM seats)")
+      .all() as unknown as { wallet: string }[];
+    for (const r of missing) {
+      this.db
+        .prepare("INSERT OR IGNORE INTO seats (wallet, seat_key, created_at) VALUES (?, ?, ?)")
+        .run(r.wallet, randomBytes(12).toString("hex"), now);
+    }
   }
 
   private migrate(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         identity    TEXT PRIMARY KEY,
-        wallet      TEXT NOT NULL UNIQUE,
+        wallet      TEXT NOT NULL,
         verified_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_users_wallet ON users(wallet);
+      CREATE TABLE IF NOT EXISTS seats (
+        wallet     TEXT PRIMARY KEY,
+        seat_key   TEXT NOT NULL UNIQUE,
+        created_at INTEGER NOT NULL
       );
       CREATE TABLE IF NOT EXISTS verify_sessions (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -225,17 +262,36 @@ export class FairSeatDB {
       .prepare("SELECT * FROM users WHERE wallet = ? COLLATE NOCASE")
       .get(wallet) as unknown as UserRow | undefined;
   }
+  // One seat (wallet) can carry several identities (the same person on web and Telegram). Binding is
+  // additive; "one Agent ID, one seat" is enforced per wallet at entry/vote time. Every wallet gets a
+  // stable seat key used to restore the seat on another device or surface.
   bindUser(identity: string, wallet: string, verifiedAt: number): void {
-    // One wallet = one seat. A wallet can be re-pointed to a new identity (e.g. moving from
-    // Telegram to web): drop any other identity holding this wallet first, so the UNIQUE(wallet)
-    // constraint never throws inside the watcher (F-3).
-    this.db.prepare("DELETE FROM users WHERE wallet = ? COLLATE NOCASE AND identity != ?").run(wallet, identity);
     this.db
       .prepare(
         `INSERT INTO users (identity, wallet, verified_at) VALUES (?, ?, ?)
          ON CONFLICT(identity) DO UPDATE SET wallet = excluded.wallet, verified_at = excluded.verified_at`
       )
       .run(identity, wallet, verifiedAt);
+    this.ensureSeat(wallet, verifiedAt);
+  }
+  ensureSeat(wallet: string, now: number): string {
+    const existing = this.seatKeyOf(wallet);
+    if (existing) return existing;
+    const key = randomBytes(12).toString("hex");
+    this.db.prepare("INSERT OR IGNORE INTO seats (wallet, seat_key, created_at) VALUES (?, ?, ?)").run(wallet, key, now);
+    return this.seatKeyOf(wallet) ?? key;
+  }
+  seatKeyOf(wallet: string): string | undefined {
+    const r = this.db.prepare("SELECT seat_key FROM seats WHERE wallet = ? COLLATE NOCASE").get(wallet) as
+      | { seat_key: string }
+      | undefined;
+    return r?.seat_key;
+  }
+  walletBySeatKey(seatKey: string): string | undefined {
+    const r = this.db.prepare("SELECT wallet FROM seats WHERE seat_key = ?").get(seatKey) as
+      | { wallet: string }
+      | undefined;
+    return r?.wallet;
   }
 
   // ---- verify sessions ----
@@ -325,6 +381,11 @@ export class FairSeatDB {
     return !!this.db
       .prepare("SELECT 1 FROM entries WHERE giveaway_id = ? AND identity = ?")
       .get(giveawayId, identity);
+  }
+  hasEnteredWallet(giveawayId: number, wallet: string): boolean {
+    return !!this.db
+      .prepare("SELECT 1 FROM entries WHERE giveaway_id = ? AND wallet = ? COLLATE NOCASE")
+      .get(giveawayId, wallet);
   }
   getEntries(giveawayId: number): EntryRow[] {
     return this.db
@@ -423,6 +484,9 @@ export class FairSeatDB {
   }
   hasVoted(pollId: number, identity: string): boolean {
     return !!this.db.prepare("SELECT 1 FROM poll_votes WHERE poll_id = ? AND identity = ?").get(pollId, identity);
+  }
+  hasVotedWallet(pollId: number, wallet: string): boolean {
+    return !!this.db.prepare("SELECT 1 FROM poll_votes WHERE poll_id = ? AND wallet = ? COLLATE NOCASE").get(pollId, wallet);
   }
   getVotes(pollId: number): PollVoteRow[] {
     return this.db.prepare("SELECT * FROM poll_votes WHERE poll_id = ? ORDER BY created_at ASC, rowid ASC").all(pollId) as unknown as PollVoteRow[];

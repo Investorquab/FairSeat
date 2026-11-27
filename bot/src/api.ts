@@ -91,6 +91,11 @@ export function startApi(service: Service, port: number): http.Server {
       if (req.method === "GET" && path === "/api/verify/status") {
         return json(res, 200, service.webStatus(url.searchParams.get("token") ?? ""));
       }
+      if (req.method === "POST" && path === "/api/verify/restore") {
+        const b = await readBody(req);
+        const r = service.restoreWeb(String(b.seatKey ?? ""));
+        return r ? json(res, 200, r) : json(res, 404, { error: "seat key not found" });
+      }
       if ((m = path.match(/^\/api\/giveaways\/(\d+)\/enter$/)) && req.method === "POST") {
         const b = await readBody(req);
         const r = await service.enterGiveaway(Number(m[1]), `web:${b.token}`, {

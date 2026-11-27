@@ -60,6 +60,15 @@ Verification is a plain on-chain transfer. There is no wallet-connect and no sig
 4. Tap **Add address**, choose **BNB Chain (BNB Smart Chain)**, paste the FairSeat verifier address, give it a label like "FairSeat", and save.
 5. Back in the wallet, **Send** BNB to that saved address, using the exact amount FairSeat shows you.
 
+### Using your seat on another device
+
+Your Agent ID is one seat, and it follows you:
+
+- **Telegram is automatic.** Your seat is tied to your Telegram account, so any device you sign into already works, no re-verifying.
+- **On the website**, verifying gives you a private **seat key** (a short code). On another device, open the verify panel, choose "Already verified on another device", and paste the key to restore your seat instantly. You can also link your Telegram to the same seat with `/restore <seat key>`, or read your key any time with `/mykey`.
+
+Under the hood, one wallet (seat) can carry several identities (web and Telegram at once), and "one Agent ID, one seat" is enforced per wallet whenever you enter or vote, so a linked seat can never double-count. The seat key is a bearer credential for entries and votes only; it can never move funds.
+
 ![Verify gate](docs/screenshots/verify-gate.png)
 
 ## Architecture
@@ -113,7 +122,7 @@ The test-only `MockAgentIdRegistry` and `MockERC20` under `contracts/contracts/m
 
 ## Bot commands & API
 
-**Telegram** (tap `/` for the menu): `/verify`, `/mystatus`, `/giveaway` (hosts), `/poll` (hosts), `/enter`, `/start`.
+**Telegram** (tap `/` for the menu): `/verify`, `/mystatus`, `/mykey` (your seat key), `/restore <key>` (use your seat here), `/giveaway` (hosts), `/poll` (hosts), `/enter`, `/start`.
 
 **HTTP API** (same backend, used by the site):
 
