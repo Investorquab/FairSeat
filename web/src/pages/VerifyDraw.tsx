@@ -36,7 +36,7 @@ export function VerifyDraw() {
 
   return (
     <div style={{ padding: "28px 0", maxWidth: 680, margin: "0 auto" }}>
-      <h2 className="page-title">Verify a draw</h2>
+      <h2 className="page-title">Check a draw</h2>
       <p className="sub">
         Anyone can recompute a random giveaway's winners from its public entrant list and block-hash seed — proof the
         result wasn't rigged. Nothing here is trusted; the math runs in your browser.

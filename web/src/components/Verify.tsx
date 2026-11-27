@@ -127,6 +127,9 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
         </li>
         <li>Keep this page open — it confirms automatically and refunds the dust.</li>
       </ol>
+      <div className="small muted">
+        You can send from the Binance app's on-chain withdrawal (Binance Pro) or any wallet that holds your Agent ID — on the BNB&nbsp;Chain network.
+      </div>
       <div className="row">
         <span className="small muted">
           <span className="spinner" style={{ marginRight: 8 }} /> waiting for your transaction…
