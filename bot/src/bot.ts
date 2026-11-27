@@ -13,6 +13,34 @@ const idOf = (telegramId: number) => `tg:${telegramId}`;
 const tgIdFromIdentity = (identity: string): number | null =>
   identity.startsWith("tg:") ? Number(identity.slice(3)) : null;
 
+// Public website, used in /start and verify prompts. Override with SITE_URL in .env.
+const SITE = process.env.SITE_URL || "https://fairseat.185-7-81-139.sslip.io";
+
+// The slash-command menu Telegram shows when a user taps "/".
+const COMMAND_MENU = [
+  { command: "verify", description: "Prove you hold a Binance Agent ID (DM me)" },
+  { command: "mystatus", description: "Check your verification" },
+  { command: "giveaway", description: "Admins: launch a locked, provably-fair giveaway" },
+  { command: "poll", description: "Admins: start a one Agent ID, one vote poll" },
+  { command: "enter", description: "Enter the current giveaway" },
+  { command: "start", description: "What FairSeat is and how to begin" },
+];
+
+// Shared verification instructions (used by /verify and the /start button).
+function verifyMessage(amount: string): string {
+  const net = config.chainId === 56 ? "BNB Chain" : "BNB testnet";
+  return (
+    "🔐 *Verify your Agent ID*\n\n" +
+    "From the Binance AI wallet that holds your Agent ID:\n\n" +
+    `1. Add this address to your *Address Book*:\n\`${config.verifierAddress}\`\n\n` +
+    `2. Send *exactly* \`${amount}\` ${config.nativeSymbol} to it.\n\n` +
+    "That's it — I'll confirm here automatically and refund the tiny amount. No keys, no logins, " +
+    "and you confirm the transfer yourself in your own wallet.\n\n" +
+    "You can send it from the Binance app's on-chain withdrawal (Binance Pro) or any wallet that holds your Agent ID.\n\n" +
+    `_Send the exact amount so I can match it to you. Network: ${net}._`
+  );
+}
+
 function parseDuration(s: string): number | null {
   const m = s.match(/^(\d+)\s*(s|m|h|d)?$/i);
   if (!m) return null;
@@ -46,13 +74,35 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
   const bot = new Bot(config.botToken, agent ? { client: { baseFetchConfig: { agent } } } : undefined);
 
   bot.command("start", async (ctx) => {
+    const kb = new InlineKeyboard()
+      .url("Open FairSeat", SITE)
+      .text("Verify my Agent ID", "start_verify");
     await ctx.reply(
       "👋 *FairSeat* — one Agent ID, one seat.\n\n" +
-        "Verify once with your Binance Agent ID, then join giveaways and votes with a tap.\n\n" +
-        "• /verify — prove you hold an Agent ID (do this in a private chat with me)\n" +
-        "• Admins: add me to your group and run /giveaway to launch a locked, provably-fair giveaway.",
-      { parse_mode: "Markdown" }
+        "Each Binance Agent ID counts exactly once in giveaways, votes and payouts — prizes are locked on-chain and winners are drawn provably-fair.\n\n" +
+        "*Get started*\n" +
+        "1. /verify — prove you hold an Agent ID (DM me so it stays private)\n" +
+        "2. Join any giveaway or vote with a single tap\n\n" +
+        "*Hosts:* add me to your group as an admin, then /giveaway or /poll.\n\n" +
+        "_Tap_ `/` _any time to see every command._",
+      { parse_mode: "Markdown", reply_markup: kb }
     );
+  });
+
+  // Inline "Verify my Agent ID" button on /start → kick off verification.
+  bot.callbackQuery("start_verify", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    if (ctx.chat?.type !== "private") {
+      await ctx.reply("DM me /verify so your verification stays private.");
+      return;
+    }
+    const res = service.startVerification(idOf(ctx.from!.id));
+    if (res.alreadyVerified) {
+      await ctx.reply(`✅ You're already verified.\nWallet: \`${res.wallet}\``, { parse_mode: "Markdown" });
+      return;
+    }
+    const amount = formatAmount(res.amountWei!);
+    await ctx.reply(verifyMessage(amount), { parse_mode: "Markdown" });
   });
 
   // /verify — in a private chat.
@@ -67,16 +117,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
       return;
     }
     const amount = formatAmount(res.amountWei!);
-    await ctx.reply(
-      "🔐 *Verify your Agent ID*\n\n" +
-        "From the Binance AI wallet that holds your Agent ID:\n\n" +
-        `1. Add this address to your *Address Book*:\n\`${config.verifierAddress}\`\n\n` +
-        `2. Send *exactly* \`${amount}\` ${config.nativeSymbol} to it.\n\n` +
-        "That's it — I'll confirm here automatically and refund the tiny amount. No keys, no logins, " +
-        "and you confirm the transfer yourself in your own wallet.\n\n" +
-        `_Send the exact amount so I can match it to you. Network: ${config.chainId === 56 ? "BNB Chain" : "BNB testnet"}._`,
-      { parse_mode: "Markdown" }
-    );
+    await ctx.reply(verifyMessage(amount), { parse_mode: "Markdown" });
   });
 
   bot.command("mystatus", async (ctx) => {
@@ -335,6 +376,9 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
       await bot.api.sendMessage(poll.chat_id, text, { parse_mode: "Markdown", reply_markup: kb });
     },
   };
+
+  // Register the slash-command menu so tapping "/" lists every command with a description.
+  bot.api.setMyCommands(COMMAND_MENU).catch((e) => console.error("setMyCommands failed:", e));
 
   return { bot, notifier };
 }

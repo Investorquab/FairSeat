@@ -5,8 +5,9 @@ import type { FairSeatDB } from "./db.js";
 // as a UNIQUE tiny amount. The backend matches the on-chain `Verified(account, amount)`
 // event to a pending session by that exact amount.
 //
-// amount = BASE (0.0001) + random(0..~0.0000999999) with 1e8-wei granularity.
-const BASE = 100_000_000_000_000n; // 0.0001 ether
+// amount = BASE (0.00001) + random(0..~0.0000099999) with 1e8-wei granularity. Kept small so the
+// dust a user sends is ~0.00001–0.00002 BNB (about a cent) while staying unique enough to match.
+const BASE = 10_000_000_000_000n; // 0.00001 ether
 const STEP = 100_000_000n; // 1e8 wei granularity (keeps the decimal short-ish)
 
 // A pending verification is only matchable for this long, limiting the window in which its
@@ -15,7 +16,7 @@ export const VERIFY_TTL_MS = 60 * 60 * 1000;
 
 export function generateVerifyAmount(db: FairSeatDB): bigint {
   for (let i = 0; i < 100; i++) {
-    const rand = BigInt(Math.floor(Math.random() * 999_999) + 1); // 1..999999
+    const rand = BigInt(Math.floor(Math.random() * 99_999) + 1); // 1..99999
     const amount = BASE + rand * STEP;
     if (!db.amountInUse(amount.toString())) return amount;
   }
