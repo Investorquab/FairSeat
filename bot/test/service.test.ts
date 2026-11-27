@@ -163,7 +163,7 @@ test("one wallet = one seat: re-binding a wallet to a new identity never throws 
   const { db, path } = freshDb();
   const now = Date.now();
   db.bindUser("tg:1", WALLET_A, now);
-  // Re-point the same wallet to a new identity (e.g. Telegram → web) — must not throw.
+  // Re-point the same wallet to a new identity (e.g. Telegram → web) - must not throw.
   db.bindUser("web:x", WALLET_A, now);
   assert.equal(db.getUser("web:x")?.wallet, WALLET_A);
   assert.equal(db.getUser("tg:1"), undefined); // old identity dropped; still one seat

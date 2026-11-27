@@ -30,5 +30,5 @@ for (const s of specs) {
   console.log(`funded ${s.amount} (rule ${s.rule}) tx ${tx.hash}`);
   await tx.wait();
 }
-console.log("seeded — the running watcher will record them shortly");
+console.log("seeded - the running watcher will record them shortly");
 db.close();

@@ -83,7 +83,7 @@ export function PollDetail({ id }: { id: number }) {
       {voted && (
         <div className="card center" style={{ marginTop: 16 }}>
           <div className="prize" style={{ fontSize: 20 }}>✅ Vote counted</div>
-          <div className="muted small">Thanks — the tally above updates live.</div>
+          <div className="muted small">Thanks - the tally above updates live.</div>
         </div>
       )}
     </div>

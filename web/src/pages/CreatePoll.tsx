@@ -70,7 +70,7 @@ export function CreatePoll() {
   return (
     <div style={{ padding: "28px 0", maxWidth: 600, margin: "0 auto" }}>
       <h2 className="page-title">New poll</h2>
-      <p className="sub">One Agent ID, one vote. Open and on-chain — anyone can audit the tally.</p>
+      <p className="sub">One Agent ID, one vote. Open and on-chain - anyone can audit the tally.</p>
       <div className="card stack">
         <div className="field" style={{ margin: 0 }}>
           <label>Question</label>

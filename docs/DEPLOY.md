@@ -7,7 +7,7 @@ backend + website.
 
 - Node 22+ and `pnpm`.
 - A **deployer wallet** with a little BNB (for contract deployment gas).
-- An **operator wallet** with a little BNB — FairSeat's backend wallet (commits off-chain-tap
+- An **operator wallet** with a little BNB - FairSeat's backend wallet (commits off-chain-tap
   entrants/votes; can never move funds). Can be the same as the deployer, but a dedicated key is
   cleaner.
 - A **BscScan API key** (free) for source verification.
@@ -24,7 +24,7 @@ pnpm hardhat run scripts/deploy.ts --network bscMainnet
 ```
 
 On mainnet the script automatically uses the **real Agent ID registry**
-(`0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F`) — it never deploys a mock. It prints the deployed
+(`0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F`) - it never deploys a mock. It prints the deployed
 addresses and writes them to `contracts/deployments/bscMainnet.json`.
 
 ## 2. Verify the source on BscScan
@@ -86,7 +86,7 @@ server {
 - Run the backend as a managed service (pm2 or a systemd unit) from the `bot/` directory, with its
   `.env` present and the SQLite `DB_PATH` on a persistent disk. Restart on reboot.
 - Keep the operator key only in the backend's environment, never in the repo.
-- The website is static — build it and let nginx serve `web/dist` with the `/api` proxy above.
+- The website is static - build it and let nginx serve `web/dist` with the `/api` proxy above.
 - Node 22's `node:sqlite` is used, so run the backend with `--experimental-sqlite`.
 
 ### Notes for an agent setting this up

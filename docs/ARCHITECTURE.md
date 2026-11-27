@@ -13,10 +13,10 @@ things a contract can't see.
 
 ## What lives where
 
-- **On-chain (the contracts):** the money and the trust guarantees — funds locked, winners hold an
+- **On-chain (the contracts):** the money and the trust guarantees - funds locked, winners hold an
   Agent ID (`balanceOf > 0`), each paid once, leftovers returned, random draw seeded by a future
   block hash, votes one-per-Agent-ID.
-- **Off-chain (the backend):** everything a contract can't read — Telegram group membership, access
+- **Off-chain (the backend):** everything a contract can't read - Telegram group membership, access
   keys, "late-joiner" rules, and the frictionless tap flow. For off-chain-tap events, the backend
   collects taps and commits the entrant/vote set on-chain just before the deadline (one tx instead of
   one per user). All of this is published for audit.

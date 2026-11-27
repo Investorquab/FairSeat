@@ -189,7 +189,7 @@ describe("GiveawayVault", () => {
     expect(await token.balanceOf(b.address)).to.equal(ethers.parseUnits("50", 18));
   });
 
-  it("resolves even if very late (>256 blocks) via fallback seed — funds never stuck", async () => {
+  it("resolves even if very late (>256 blocks) via fallback seed - funds never stuck", async () => {
     const { vault, host, operator, a, b, resolver } = await deploy();
     const prize = ethers.parseEther("2");
     const drawBlock = (await currentBlock()) + 4n;
@@ -203,7 +203,7 @@ describe("GiveawayVault", () => {
     expect(await ethers.provider.getBalance(await vault.getAddress())).to.equal(0n);
   });
 
-  it("a winner that rejects funds is skipped, not a DoS — funds never lock (F-1)", async () => {
+  it("a winner that rejects funds is skipped, not a DoS - funds never lock (F-1)", async () => {
     const { reg, vault, host, operator, a, resolver } = await deploy();
     const Rej = await ethers.getContractFactory("RejectingReceiver");
     const rej = await Rej.deploy();

@@ -34,7 +34,7 @@ function verifyMessage(amount: string): string {
     "From the Binance AI wallet that holds your Agent ID:\n\n" +
     `1. Add this address to your *Address Book*:\n\`${config.verifierAddress}\`\n\n` +
     `2. Send *exactly* \`${amount}\` ${config.nativeSymbol} to it.\n\n` +
-    "That's it — I'll confirm here automatically and refund the tiny amount. No keys, no logins, " +
+    "That's it - I'll confirm here automatically and refund the tiny amount. No keys, no logins, " +
     "and you confirm the transfer yourself in your own wallet.\n\n" +
     "You can send it from the Binance app's on-chain withdrawal (Binance Pro) or any wallet that holds your Agent ID.\n\n" +
     `_Send the exact amount so I can match it to you. Network: ${net}._`
@@ -78,10 +78,10 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
       .url("Open FairSeat", SITE)
       .text("Verify my Agent ID", "start_verify");
     await ctx.reply(
-      "👋 *FairSeat* — one Agent ID, one seat.\n\n" +
-        "Each Binance Agent ID counts exactly once in giveaways, votes and payouts — prizes are locked on-chain and winners are drawn provably-fair.\n\n" +
+      "👋 *FairSeat* - one Agent ID, one seat.\n\n" +
+        "Each Binance Agent ID counts exactly once in giveaways, votes and payouts - prizes are locked on-chain and winners are drawn provably-fair.\n\n" +
         "*Get started*\n" +
-        "1. /verify — prove you hold an Agent ID (DM me so it stays private)\n" +
+        "1. /verify - prove you hold an Agent ID (DM me so it stays private)\n" +
         "2. Join any giveaway or vote with a single tap\n\n" +
         "*Hosts:* add me to your group as an admin, then /giveaway or /poll.\n\n" +
         "_Tap_ `/` _any time to see every command._",
@@ -105,7 +105,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     await ctx.reply(verifyMessage(amount), { parse_mode: "Markdown" });
   });
 
-  // /verify — in a private chat.
+  // /verify - in a private chat.
   bot.command("verify", async (ctx) => {
     if (ctx.chat?.type !== "private") {
       await ctx.reply("Please DM me /verify so your verification stays private.");
@@ -157,7 +157,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     const identity = idOf(ctx.from!.id);
     const hostWallet = service.walletOf(identity);
     if (!hostWallet) {
-      await ctx.reply("Verify first so I know which wallet funds the giveaway — DM me /verify.");
+      await ctx.reply("Verify first so I know which wallet funds the giveaway - DM me /verify.");
       return;
     }
 
@@ -222,7 +222,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     const identity = idOf(ctx.from!.id);
     const hostWallet = service.walletOf(identity);
     if (!hostWallet) {
-      await ctx.reply("Verify first so I know which wallet creates the poll — DM me /verify.");
+      await ctx.reply("Verify first so I know which wallet creates the poll - DM me /verify.");
       return;
     }
     const prep = await service.preparePoll({
@@ -257,7 +257,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     if (res.ok && res.mode === "tap") {
       await ctx.answerCallbackQuery({ text: "✅ Vote counted. Thanks!", show_alert: true });
     } else if (res.ok && res.mode === "onchain") {
-      await ctx.answerCallbackQuery({ text: "This poll uses on-chain voting — vote from the FairSeat site.", show_alert: true });
+      await ctx.answerCallbackQuery({ text: "This poll uses on-chain voting - vote from the FairSeat site.", show_alert: true });
     } else {
       const map: Record<string, string> = {
         not_verified: "Verify first: DM me /verify.",
@@ -291,14 +291,14 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
     if (res.ok && res.mode === "tap") {
       await ctx.answerCallbackQuery({ text: "✅ You're in! Good luck.", show_alert: true });
     } else if (res.ok && res.mode === "onchain") {
-      await ctx.answerCallbackQuery({ text: "This giveaway uses on-chain entry — DM me /enterchain " + id, show_alert: true });
+      await ctx.answerCallbackQuery({ text: "This giveaway uses on-chain entry - DM me /enterchain " + id, show_alert: true });
     } else {
       const map: Record<string, string> = {
         not_verified: "Verify first: DM me /verify.",
         not_open: "This giveaway isn't open.",
         closed: "Entries are closed.",
         already: "You're already entered.",
-        wrong_key: "This is a private giveaway — use /enter " + id + " <key> in DM.",
+        wrong_key: "This is a private giveaway - use /enter " + id + " <key> in DM.",
         not_member: "Join the group first to enter.",
       };
       await ctx.answerCallbackQuery({ text: map[(res as { reason: string }).reason] ?? "Could not enter.", show_alert: true });
@@ -332,7 +332,7 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
       const text =
         "🎉 *Giveaway is LIVE!*\n\n" +
         `Prize: *${amount} ${config.nativeSymbol}* · winners: *${g.winner_count}* · ${RULE_LABEL[g.rule]}\n` +
-        `Scope: *${g.scope}*${g.scope === "private" ? " (needs access key — /enter " + g.id + " <key> in DM)" : ""}\n\n` +
+        `Scope: *${g.scope}*${g.scope === "private" ? " (needs access key - /enter " + g.id + " <key> in DM)" : ""}\n\n` +
         "One Agent ID, one seat. Tap to enter 👇\n" +
         `_Locked on-chain: ${config.explorer}/address/${config.vaultAddress}_`;
       const sent = await bot.api.sendMessage(g.chat_id, text, { parse_mode: "Markdown", reply_markup: g.scope === "private" ? undefined : kb });
@@ -344,8 +344,8 @@ export function createBot(service: Service, chain: Chain): { bot: Bot; notifier:
       const lines = info.winners.map((w) => `• \`${w.address}\``).join("\n");
       const text =
         "🏆 *Giveaway resolved!*\n\n" +
-        (info.winners.length ? `Winners (${amount} ${config.nativeSymbol} each):\n${lines}\n\n` : "No entrants — prize returned to the host.\n\n") +
-        `Provably fair — seed from block hash \`${seed.slice(0, 18)}…\`\n` +
+        (info.winners.length ? `Winners (${amount} ${config.nativeSymbol} each):\n${lines}\n\n` : "No entrants - prize returned to the host.\n\n") +
+        `Provably fair - seed from block hash \`${seed.slice(0, 18)}…\`\n` +
         `Verify on-chain: ${config.explorer}/tx/${txHash}`;
       if (info.giveaway.chat_id) {
         await bot.api.sendMessage(info.giveaway.chat_id, text, { parse_mode: "Markdown" });

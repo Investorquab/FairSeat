@@ -38,7 +38,7 @@ export function Create() {
     try {
       const { address, chainId } = await connectWallet();
       if (config && chainId !== config.chainId) {
-        setErr(`Wrong network — please switch your wallet to chain ${config.chainId}.`);
+        setErr(`Wrong network - please switch your wallet to chain ${config.chainId}.`);
         return;
       }
       setAddress(address);
@@ -84,7 +84,7 @@ export function Create() {
         <div className="card stack center">
           <div className="prize" style={{ fontSize: 26 }}>🎉 Giveaway funded &amp; locked!</div>
           <p className="muted">
-            Your reward is locked on-chain — no one, including FairSeat, can withdraw it early. It will appear on the
+            Your reward is locked on-chain - no one, including FairSeat, can withdraw it early. It will appear on the
             home page within a few seconds, ready to share.
           </p>
           {config && (
@@ -102,7 +102,7 @@ export function Create() {
     <div style={{ padding: "28px 0", maxWidth: 620, margin: "0 auto" }}>
       <h2 className="page-title">Create a giveaway</h2>
       <p className="sub">
-        Lock a reward on-chain and let your community enter — one Agent ID, one seat. You fund it from your own wallet;
+        Lock a reward on-chain and let your community enter - one Agent ID, one seat. You fund it from your own wallet;
         winners are paid automatically.
       </p>
 
@@ -194,7 +194,7 @@ export function Create() {
         )}
         {err && <div className="err">{err}</div>}
         <div className="small muted">
-          Funds are locked in an open-source vault. You can only ever reclaim leftovers after the draw — never the whole
+          Funds are locked in an open-source vault. You can only ever reclaim leftovers after the draw - never the whole
           prize once people enter. You confirm the transaction in your own wallet.
         </div>
       </div>

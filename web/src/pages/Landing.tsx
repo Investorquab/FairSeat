@@ -70,7 +70,7 @@ export function Landing() {
             <h1 data-enter="2">One Agent ID.<br />One seat.</h1>
             <p className="lead" data-enter="2">
               Community giveaways, votes and payouts where every Binance Agent ID counts exactly once.
-              Prizes are locked on-chain, winners are drawn provably-fair, and anyone can check the result —
+              Prizes are locked on-chain, winners are drawn provably-fair, and anyone can check the result -
               no sign-ups, no multi-wallet farming.
             </p>
             <div className="cta-row" data-enter="4">
@@ -91,7 +91,7 @@ export function Landing() {
           <div className="how">
             <div className="how-step">
               <h3>Verify your Agent ID</h3>
-              <p>Send one tiny transaction from your Binance AI wallet to prove you hold an Agent ID. No keys, no login — you confirm it yourself, and the dust is refunded.</p>
+              <p>Send one tiny transaction from your Binance AI wallet to prove you hold an Agent ID. No keys, no login - you confirm it yourself, and the dust is refunded.</p>
             </div>
             <div className="how-step">
               <h3>Take your seat</h3>
@@ -132,7 +132,7 @@ export function Landing() {
         <section className="section">
           <div className="wrap">
             <div className="section-head">
-              <h2>Nothing to trust — everything to check</h2>
+              <h2>Nothing to trust - everything to check</h2>
               <p>FairSeat holds no owner key over your funds. Every contract is live and verified on {chainName}.</p>
             </div>
             <div className="trust-grid">
@@ -160,7 +160,7 @@ export function Landing() {
           </div>
         </div>
         <div className="wrap" style={{ marginTop: 14, color: "var(--faint)", fontSize: 13 }}>
-          One Agent ID, one seat. You confirm every transaction in your own wallet — FairSeat never asks for keys or logins.
+          One Agent ID, one seat. You confirm every transaction in your own wallet - FairSeat never asks for keys or logins.
         </div>
       </footer>
     </div>

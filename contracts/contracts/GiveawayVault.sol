@@ -8,7 +8,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 /// @title GiveawayVault
 /// @notice Locks a host's reward and pays it out to Agent-ID-holding winners by a rule the
-///         host chooses, with no one — not even the host or FairSeat — able to withdraw the
+///         host chooses, with no one - not even the host or FairSeat - able to withdraw the
 ///         funds early or re-roll the draw.
 ///
 /// @dev Trust model (what this contract guarantees on-chain):
@@ -20,7 +20,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///      - Random draws are seeded from a FUTURE block hash (`drawBlock`); entrants are fixed
 ///        before that block exists, so the result is recomputable by anyone and cannot be
 ///        re-rolled. (Honest caveat: block producers can influence a single block hash; this
-///        is standard for on-chain giveaways and acceptable at this scale — not a VRF.)
+///        is standard for on-chain giveaways and acceptable at this scale - not a VRF.)
 ///
 ///      What lives OFF-CHAIN (by design): Telegram group membership, access keys, "most
 ///      active" and other host rules, and for off-chain-tap giveaways the entrant selection.
@@ -186,7 +186,7 @@ contract GiveawayVault is ReentrancyGuard {
     }
 
     // ----------------------------------------------------------------------------------
-    // Resolve (permissionless) — pick winners from the fixed entrant set and pay them
+    // Resolve (permissionless) - pick winners from the fixed entrant set and pay them
     // ----------------------------------------------------------------------------------
 
     /// @notice Resolve a giveaway after its draw block. Anyone may call it (no trusted party).
@@ -197,7 +197,7 @@ contract GiveawayVault is ReentrancyGuard {
 
         // Seed from the draw block's hash. `blockhash` only covers the most recent 256
         // blocks, so if resolution is very late (draw block older than that) we fall back
-        // to a recent block hash — funds can never get stuck. Entrants were fixed before
+        // to a recent block hash - funds can never get stuck. Entrants were fixed before
         // the draw block in either case. (The backend resolves promptly, so the primary
         // path is the norm; the fallback is a safety net only.)
         bytes32 seed = blockhash(g.drawBlock);
@@ -271,7 +271,7 @@ contract GiveawayVault is ReentrancyGuard {
             return winners;
         }
 
-        // Rule.Random — partial Fisher-Yates shuffle seeded by the block hash.
+        // Rule.Random - partial Fisher-Yates shuffle seeded by the block hash.
         winners = new address[](count);
         for (uint256 i = 0; i < count; i++) {
             uint256 j = i + (uint256(keccak256(abi.encode(seed, i))) % (len - i));

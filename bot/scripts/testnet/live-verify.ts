@@ -42,9 +42,9 @@ async function main() {
   watcher.stop();
 
   if (bound) {
-    console.log(`SUCCESS — db binding: tg:${tid} ↔ ${svc.walletOf(tid)}`);
+    console.log(`SUCCESS - db binding: tg:${tid} ↔ ${svc.walletOf(tid)}`);
   } else {
-    console.log("TIMEOUT — watcher did not bind");
+    console.log("TIMEOUT - watcher did not bind");
     process.exitCode = 1;
   }
   db.close();

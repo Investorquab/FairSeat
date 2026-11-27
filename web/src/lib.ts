@@ -34,7 +34,7 @@ export function recomputeWinners(entrants: string[], rule: number, winnerCount: 
   const count = Math.min(winnerCount, len);
   if (rule === 0) return entrants.slice(0, count); // FirstN
 
-  // Random — partial Fisher-Yates seeded by keccak256(abi.encode(seed, i))
+  // Random - partial Fisher-Yates seeded by keccak256(abi.encode(seed, i))
   const pool = [...entrants];
   const coder = ethers.AbiCoder.defaultAbiCoder();
   const seedBig = BigInt(seed);

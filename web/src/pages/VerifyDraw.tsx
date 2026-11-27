@@ -38,7 +38,7 @@ export function VerifyDraw() {
     <div style={{ padding: "28px 0", maxWidth: 680, margin: "0 auto" }}>
       <h2 className="page-title">Check a draw</h2>
       <p className="sub">
-        Anyone can recompute a random giveaway's winners from its public entrant list and block-hash seed — proof the
+        Anyone can recompute a random giveaway's winners from its public entrant list and block-hash seed - proof the
         result wasn't rigged. Nothing here is trusted; the math runs in your browser.
       </p>
 
@@ -74,7 +74,7 @@ export function VerifyDraw() {
               </div>
 
               <div>
-                <div className="small muted">Entrants ({data.entrants.length}) — committed before the seed existed</div>
+                <div className="small muted">Entrants ({data.entrants.length}) - committed before the seed existed</div>
                 <div className="callout" style={{ marginTop: 6, maxHeight: 160, overflow: "auto" }}>
                   {data.entrants.map((a: string, i: number) => (
                     <div key={a} className="mono small">

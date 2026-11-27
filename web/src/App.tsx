@@ -69,7 +69,7 @@ function Gate() {
       </div>
       <h1 data-enter="2">Take your seat</h1>
       <p className="lead" data-enter="2">
-        FairSeat is for verified Binance Agent IDs. Prove yours once — one tiny transaction, refunded — and every
+        FairSeat is for verified Binance Agent IDs. Prove yours once - one tiny transaction, refunded - and every
         giveaway and vote opens up.
       </p>
       <div data-enter="3" style={{ textAlign: "left" }}>
@@ -89,7 +89,7 @@ export function App() {
   const route = useHashRoute();
   const base = route.split("?")[0];
 
-  // Public landing — its own chrome.
+  // Public landing - its own chrome.
   if (base === "#/" || base === "") {
     return (
       <ConfigCtx.Provider value={config}>
@@ -126,7 +126,7 @@ export function App() {
         <main className="container">{page}</main>
         <footer className="footer">
           <div className="container foot-row">
-            <div className="muted">FairSeat — one Agent ID, one seat. Live on {config ? (config.chainId === 56 ? "BNB Chain" : "BNB testnet") : "…"}.</div>
+            <div className="muted">FairSeat - one Agent ID, one seat. Live on {config ? (config.chainId === 56 ? "BNB Chain" : "BNB testnet") : "…"}.</div>
             <a className="link" href="#/">← Home</a>
           </div>
         </footer>

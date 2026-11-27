@@ -8,7 +8,7 @@ import {IAgentIdRegistry} from "../interfaces/IAgentIdRegistry.sol";
 ///         (the real Agent ID only exists on BNB mainnet). It mirrors the single behaviour
 ///         FairSeat depends on: `balanceOf(addr) > 0` means `addr` holds an Agent ID, and an
 ///         address can hold at most one (soulbound / non-transferable).
-/// @dev    NEVER deploy this to mainnet — mainnet uses the real registry
+/// @dev    NEVER deploy this to mainnet - mainnet uses the real registry
 ///         0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F.
 contract MockAgentIdRegistry is IAgentIdRegistry {
     string public constant name = "SPACE ID Agent ID";

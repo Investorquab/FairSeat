@@ -93,7 +93,7 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
         <div>
           <strong>Verify once with your Binance Agent ID</strong>
           <div className="small muted" style={{ marginTop: 4 }}>
-            One tiny transaction from your Binance AI wallet proves you hold an Agent ID. No keys, no login — you confirm it yourself, and the dust is refunded.
+            One tiny transaction from your Binance AI wallet proves you hold an Agent ID. No keys, no login - you confirm it yourself, and the dust is refunded.
           </div>
         </div>
         <button className="btn btn-primary" onClick={start} disabled={busy}>
@@ -125,10 +125,10 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
             <Copy text={session.amount} />
           </div>
         </li>
-        <li>Keep this page open — it confirms automatically and refunds the dust.</li>
+        <li>Keep this page open - it confirms automatically and refunds the dust.</li>
       </ol>
       <div className="small muted">
-        You can send from the Binance app's on-chain withdrawal (Binance Pro) or any wallet that holds your Agent ID — on the BNB&nbsp;Chain network.
+        You can send from the Binance app's on-chain withdrawal (Binance Pro) or any wallet that holds your Agent ID - on the BNB&nbsp;Chain network.
       </div>
       <div className="row">
         <span className="small muted">

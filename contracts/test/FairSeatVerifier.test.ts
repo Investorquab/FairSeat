@@ -23,7 +23,7 @@ describe("FairSeatVerifier", () => {
       .to.emit(verifier, "Verified")
       .withArgs(holder.address, amount);
 
-    // Contract keeps nothing — the dust was refunded.
+    // Contract keeps nothing - the dust was refunded.
     expect(await ethers.provider.getBalance(await verifier.getAddress())).to.equal(0n);
   });
 

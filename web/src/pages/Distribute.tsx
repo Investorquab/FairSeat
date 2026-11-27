@@ -106,13 +106,13 @@ export function Distribute() {
       <h2 className="page-title">Batch distribution</h2>
       <p className="sub">
         Paste a list of addresses and amounts, and pay them all in one transaction. Only addresses that hold a Binance
-        Agent ID are paid — anyone else is skipped and refunded to you. Perfect for crediting a collated list of
+        Agent ID are paid - anyone else is skipped and refunded to you. Perfect for crediting a collated list of
         verified winners.
       </p>
 
       <div className="card stack">
         <div className="field" style={{ margin: 0 }}>
-          <label>Recipients — one per line: <span className="mono">address, amount ({sym})</span></label>
+          <label>Recipients - one per line: <span className="mono">address, amount ({sym})</span></label>
           <textarea
             className="input"
             style={{ height: 160, padding: 12, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 13, resize: "vertical" }}

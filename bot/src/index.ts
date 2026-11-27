@@ -40,7 +40,7 @@ async function main(): Promise<void> {
     console.log("FairSeat bot starting…");
     await bot.start();
   } else {
-    console.log("No BOT_TOKEN set — running API + watcher only (no Telegram).");
+    console.log("No BOT_TOKEN set - running API + watcher only (no Telegram).");
   }
 }
 

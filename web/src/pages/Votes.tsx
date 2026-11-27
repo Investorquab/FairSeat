@@ -19,7 +19,7 @@ export function Votes() {
         <div>
           <div className="preview-head"><span className="dot" /> One Agent ID, one vote</div>
           <h2 className="page-title">Votes</h2>
-          <p className="sub">Open, on-chain polls where each Agent ID counts once — no brigading, no fake wallets.</p>
+          <p className="sub">Open, on-chain polls where each Agent ID counts once - no brigading, no fake wallets.</p>
         </div>
         <a href="#/create-poll" className="btn btn-primary">New poll</a>
       </div>

@@ -35,7 +35,7 @@ export interface GiveawayRow {
   entries_close_at: number; // wall-clock ms; entries accepted until then
   draw_block: number;
   status: "open" | "resolved" | "cancelled";
-  committed: number; // 0/1 — off-chain-tap entrants pushed on-chain before the draw
+  committed: number; // 0/1 - off-chain-tap entrants pushed on-chain before the draw
   seed: string | null; // block-hash seed used for the draw
   resolve_tx: string | null;
   per_winner_wei: string | null;

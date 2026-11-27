@@ -6,7 +6,7 @@ import { config } from "./config.js";
 // sandbox all egress must go through the agent proxy, so when `http_proxy` is set we
 // route ethers through Node's global fetch (which honours the proxy when the process is
 // started with NODE_USE_ENV_PROXY=1). On a normal VPS `http_proxy` is unset and ethers
-// uses its default transport — nothing changes.
+// uses its default transport - nothing changes.
 export function configureProxyFetch(): void {
   if (!process.env.http_proxy && !process.env.HTTPS_PROXY) return;
   const getUrl: FetchGetUrlFunc = async (req) => {

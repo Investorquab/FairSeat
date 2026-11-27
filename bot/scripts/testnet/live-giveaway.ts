@@ -79,10 +79,10 @@ async function main() {
   if (resolvedWinner) {
     const won = resolvedWinner as { address: string; telegramId?: number };
     const isEntrant = [w1.toLowerCase(), w2.toLowerCase()].includes(won.address.toLowerCase());
-    console.log(`\nSUCCESS — winner ${won.address} (tg:${won.telegramId}) is one of the entrants: ${isEntrant}`);
+    console.log(`\nSUCCESS - winner ${won.address} (tg:${won.telegramId}) is one of the entrants: ${isEntrant}`);
     if (!isEntrant || !won.telegramId) process.exitCode = 1;
   } else {
-    console.log("TIMEOUT — no resolution");
+    console.log("TIMEOUT - no resolution");
     process.exitCode = 1;
   }
   db.close();

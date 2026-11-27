@@ -102,11 +102,11 @@ export function GiveawayDetail({ id }: { id: number }) {
           <strong>🏆 Winners</strong>
           <div className="callout">
             {(g.winners ?? []).length === 0 ? (
-              <span className="muted">No entrants — prize returned to the host.</span>
+              <span className="muted">No entrants - prize returned to the host.</span>
             ) : (
               (g.winners ?? []).map((w) => (
                 <div key={w} className="mono win">
-                  🏆 {shortAddr(w)} — {fmt(g.perWinnerWei)} {sym}
+                  🏆 {shortAddr(w)} - {fmt(g.perWinnerWei)} {sym}
                 </div>
               ))
             )}
@@ -120,14 +120,14 @@ export function GiveawayDetail({ id }: { id: number }) {
         </div>
       ) : g.scope === "members" ? (
         <div className="card center muted" style={{ marginTop: 16 }}>
-          This is a Telegram group giveaway — enter it from the group chat.
+          This is a Telegram group giveaway - enter it from the group chat.
         </div>
       ) : !open ? (
-        <div className="card center muted" style={{ marginTop: 16 }}>Entries are closed — drawing shortly.</div>
+        <div className="card center muted" style={{ marginTop: 16 }}>Entries are closed - drawing shortly.</div>
       ) : entered ? (
         <div className="card center" style={{ marginTop: 16 }}>
           <div className="prize" style={{ fontSize: 22 }}>✅ You're in!</div>
-          <div className="muted small">Good luck — winners are paid automatically to their Agent-ID wallet.</div>
+          <div className="muted small">Good luck - winners are paid automatically to their Agent-ID wallet.</div>
         </div>
       ) : (
         <div className="stack" style={{ marginTop: 16 }}>
