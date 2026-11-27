@@ -32,6 +32,9 @@ function verifyMessage(amount: string): string {
   return (
     "🔐 *Verify your Agent ID*\n\n" +
     "From the Binance AI wallet that holds your Agent ID:\n\n" +
+    "*Easiest:* paste this into Binance AI and it sends it for you:\n" +
+    `\`Send ${amount} ${config.nativeSymbol} to ${config.verifierAddress} on BNB Chain\`\n\n` +
+    "*Or send it yourself:*\n" +
     `1. Add this address to your *Address Book*:\n\`${config.verifierAddress}\`\n\n` +
     `2. Send *exactly* \`${amount}\` ${config.nativeSymbol} to it.\n\n` +
     "That's it - I'll confirm here automatically and refund the tiny amount. No keys, no logins, " +

@@ -105,9 +105,18 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
   }
 
   const sym = config?.nativeSymbol ?? "BNB";
+  const command = `Send ${session.amount} ${sym} to ${session.verifier} on BNB Chain`;
   return (
     <div className="callout stack">
       <strong>Send one tiny transaction from your Binance AI wallet</strong>
+      <div>
+        <div className="small muted" style={{ marginBottom: 6 }}>Paste this into Binance AI and it sends it for you:</div>
+        <div className="code">
+          <span>{command}</span>
+          <Copy text={command} />
+        </div>
+      </div>
+      <div className="small muted">Or send it yourself:</div>
       <ol className="steps">
         <li>
           Add this contract to your <b>Address Book</b>:
