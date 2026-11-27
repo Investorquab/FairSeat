@@ -181,6 +181,16 @@ h2.page-title { font-size: var(--t-h2); letter-spacing: -0.03em; margin: 0 0 var
 
 main.container { padding-top: var(--s-7); padding-bottom: var(--s-9); }
 
+/* disclosure guide (e.g. "how to add to Address Book") */
+.guide { border-top: 1px solid var(--line); padding-top: var(--s-3); }
+.guide > summary { cursor: pointer; color: var(--muted); font-size: 14px; font-weight: 600; list-style: none; }
+.guide > summary::-webkit-details-marker { display: none; }
+.guide > summary::before { content: "+ "; color: var(--accent); font-weight: 700; }
+.guide[open] > summary::before { content: "- "; }
+.guide > summary:hover { color: var(--ink); }
+.guide ol { margin: var(--s-3) 0 0; padding-left: 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.guide ol li { margin-bottom: 6px; }
+
 /* =========================================================
    SEAT MAP — the identity motif
    ========================================================= */

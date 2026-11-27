@@ -6,36 +6,24 @@ Built for the **Binance Wallet x BNB Chain Agent ID Hackathon**. Live on BNB Cha
 
 **Try it:** [fairseat.185-7-81-139.sslip.io](https://fairseat.185-7-81-139.sslip.io) · **Telegram:** [@getfairseat_bot](https://t.me/getfairseat_bot)
 
-![FairSeat](docs/screenshots/landing.png)
+![FairSeat](docs/screenshots/hero.png)
 
-## Facts
+## Why this exists
 
-| | |
-| --- | --- |
-| Network | BNB Chain mainnet (chainId 56) |
-| Agent ID registry | [`0x60B9…022F`](https://bscscan.com/address/0x60B9262456dE011F7d15a54CdD8c48bAaa8B022f) (soulbound ERC-721) |
-| FairSeatVerifier | [`0xa065…9E2B`](https://bscscan.com/address/0xa065A7F4b10Ef6895Ae38474DaD569daDc459E2B#code), verified |
-| GiveawayVault | [`0xC5c1…0292`](https://bscscan.com/address/0xC5c13aED4762e556608E0A064c0F759b08d20292#code), verified |
-| Poll | [`0x45bB…A5cc`](https://bscscan.com/address/0x45bBef44cDAabaB4ae3D730f22fb5Cc737eDA5cc#code), verified |
-| BatchDistributor | [`0x1d7F…3e39`](https://bscscan.com/address/0x1d7Fda5578fc1b36Bd7A8542bEe44d3b6e033e39#code), verified |
-| Stack | Solidity 0.8.24, Hardhat, OpenZeppelin, Node 22 + TypeScript, grammY, ethers v6, Vite + React 18 |
-| Tests | 24 contract + 9 backend passing ([`audit.md`](audit.md)) |
-| Owner over funds | None (see Security) |
+Online giveaways, airdrops and community votes share one weakness: identity. One person with fifty wallets takes fifty entries, fifty votes, fifty claims. Captchas, follower counts and snapshot tricks are gamed in minutes, so the reward flows to whoever farms the most addresses, not to the people a project actually wants to reach.
 
-## Why
-
-Crypto giveaways, airdrops and polls are broken by multi-wallet farming: one person with 50 wallets takes 50 entries, 50 votes, 50 claims. A Binance Agent ID is one per Binance account and non-transferable (a soulbound ERC-721). FairSeat uses it as a fair seat: one participation per Agent ID, checked on-chain every time money or a vote moves. Sybil-resistance comes from Binance KYC; FairSeat does not claim to prove personhood.
+A **Binance Agent ID** changes the economics. It is **one per Binance account**, **non-transferable**, and lives on-chain as a soulbound ERC-721 you can only claim inside the Binance app. FairSeat uses it as a fair seat: one participation per Agent ID, checked on-chain every single time money or a vote moves. A room of fifty bot wallets collapses to one seat. Sybil-resistance comes from Binance KYC, so FairSeat does not claim to prove personhood, but it makes multi-wallet farming pointless and every outcome publicly checkable.
 
 ## What it does
 
 | | |
 | --- | --- |
-| **Verify once** | Send one tiny transaction from your Binance AI wallet; FairSeat confirms you hold an Agent ID and links your account. No keys, no login, dust refunded. After that, joining is a tap. |
-| **Giveaways** | A host funds an on-chain vault nobody can withdraw early. Winners by first-come, random, or split-equally, paid automatically. A winner that can't receive is skipped and their share returns to the host. |
-| **Votes** | One Agent ID, one vote. The tally is public and on-chain. |
-| **Distribute** | Pay a whole list in one transaction. Only Agent-ID holders are paid; anyone else is skipped and refunded in the same tx. |
+| **Verify once** | Send one tiny transaction from your Binance AI wallet; FairSeat confirms you hold an Agent ID and links your account. No keys, no login, no wallet-connect, and the dust is refunded. After that, joining anything is one tap. |
+| **Giveaways** | A host funds an on-chain vault that nobody, not even FairSeat, can withdraw early. Winners are chosen first-come, random, or split-equally, and paid automatically. A winner that cannot receive is skipped and their share returns to the host. |
+| **Votes** | One Agent ID, one vote. The tally is public and on-chain, so it cannot be stuffed with fake wallets. |
+| **Distribute** | Pay a whole list of addresses in a single transaction. Only Agent-ID holders are paid; anyone else is skipped and refunded in the same tx. |
 
-Runs as a Telegram bot, a website, and on-chain contracts. One backend engine serves both surfaces (`tg:` and `web:` identities).
+Runs as a Telegram bot, a website, and on-chain contracts. One backend engine serves both surfaces, using a generic identity (`tg:<id>` or `web:<token>`) so the same rules apply everywhere.
 
 ## How it works
 
@@ -56,7 +44,19 @@ sequenceDiagram
     Va-->>U: Pay the winner from the locked vault
 ```
 
-Every payout and vote calls `registry.balanceOf(address) > 0`, so only holders count. Giveaway funds can only leave to winners who hold an Agent ID or back to the host; there is no admin path that moves them. Random winners come from a future block hash with the entrant set fixed before that block exists, so the draw can't be re-rolled and anyone can recompute it (the site's **Check a draw** page does this in your browser).
+Every payout and vote calls `registry.balanceOf(address) > 0` against the real Agent ID registry, so only holders count. Giveaway funds live in the vault and can only leave to winners who hold an Agent ID or back to the host; there is no admin path that moves them. Random winners come from a **future block hash** with the entrant set fixed *before* that block exists, so the draw cannot be re-rolled and anyone can recompute it. The site's **Check a draw** page does exactly that, in your browser.
+
+## Verifying your Agent ID
+
+Verification is a plain on-chain transfer. There is no wallet-connect and no signing prompt; you just make a send you already know how to make. FairSeat gives you a verifier address and a unique tiny amount, matches your transaction by that amount, binds your seat, and refunds the dust. Every amount is kept to 8 decimal places or fewer so it is always typeable in the Binance wallet.
+
+**Adding the verifier to your Binance Address Book** (so you can send to it in two taps):
+
+1. Open the Binance app and go to your **Binance Wallet**.
+2. Tap the **menu / dashboard icon at the top-right** of the wallet screen.
+3. Scroll down and open **Address Book**.
+4. Tap **Add address**, choose **BNB Chain (BNB Smart Chain)**, paste the FairSeat verifier address, give it a label like "FairSeat", and save.
+5. Back in the wallet, **Send** BNB to that saved address, using the exact amount FairSeat shows you.
 
 ![Verify gate](docs/screenshots/verify-gate.png)
 
@@ -78,16 +78,60 @@ flowchart LR
     end
 ```
 
-- **`contracts/`**: the four Solidity contracts, Hardhat tests, deploy script. The money and the one-seat rule live here.
-- **`bot/`**: one TypeScript backend (grammY Telegram bot + HTTP API + chain-watcher); business logic is shared by both surfaces.
-- **`web/`**: the website (Vite + React), landing page, verify gate, and the browser-side draw recomputation.
+- **`contracts/`**: the four Solidity contracts, their Hardhat tests, and the deploy script. The money and the one-seat rule live here; nothing off-chain can override them.
+- **`bot/`**: one TypeScript backend. The grammY Telegram bot, an HTTP API for the website, and a chain-watcher that reacts to on-chain events all share a single framework-independent service, so a giveaway behaves the same whether it was created in Telegram or on the web.
+- **`web/`**: the website (Vite + React, hash-routed): the public landing page, the verify gate, the giveaway and poll pages, and the browser-side Check a draw recomputation.
 
-## Security
+The split is deliberate: the chain gives the hard guarantees (locked funds, one-seat checks, un-rollable draws), and the off-chain engine gives the friendly rules (scopes, access keys, tap-to-enter) without ever being able to touch the money.
 
-- **No keys, ever.** FairSeat never asks for a key, seed phrase or login, and never signs for you. Every transaction is one you send and confirm yourself.
-- **No custody.** No owner can move user funds. The only privileged role is an immutable `operator` that can only submit off-chain-tap entrants/votes; it can never withdraw, mint, pause or take funds ([`docs/OWNER-PERMISSIONS.md`](docs/OWNER-PERMISSIONS.md)).
-- **Stored:** a local SQLite file with identity-to-wallet bindings and verification sessions. No keys, no funds.
-- **Audited internally,** not third-party ([`audit.md`](audit.md)). All four contracts are open-source and verified on BscScan.
+## Facts
+
+| | |
+| --- | --- |
+| Network | BNB Chain mainnet (chainId 56) |
+| Agent ID registry | [`0x60B9262456dE011F7d15a54CdD8c48bAaa8B022f`](https://bscscan.com/address/0x60B9262456dE011F7d15a54CdD8c48bAaa8B022f) (Binance / SPACE ID, soulbound ERC-721) |
+| FairSeatVerifier | [`0xa065A7F4b10Ef6895Ae38474DaD569daDc459E2B`](https://bscscan.com/address/0xa065A7F4b10Ef6895Ae38474DaD569daDc459E2B#code), verified |
+| GiveawayVault | [`0xC5c13aED4762e556608E0A064c0F759b08d20292`](https://bscscan.com/address/0xC5c13aED4762e556608E0A064c0F759b08d20292#code), verified |
+| Poll | [`0x45bBef44cDAabaB4ae3D730f22fb5Cc737eDA5cc`](https://bscscan.com/address/0x45bBef44cDAabaB4ae3D730f22fb5Cc737eDA5cc#code), verified |
+| BatchDistributor | [`0x1d7Fda5578fc1b36Bd7A8542bEe44d3b6e033e39`](https://bscscan.com/address/0x1d7Fda5578fc1b36Bd7A8542bEe44d3b6e033e39#code), verified |
+| Stack | Solidity 0.8.24, Hardhat, OpenZeppelin, Node 22 + TypeScript, grammY, ethers v6, Vite + React 18 |
+| Tests | 24 contract tests + 9 backend tests passing ([`audit.md`](audit.md)) |
+| Owner over funds | None (see [Security](#security-and-privacy)) |
+
+### The contracts
+
+| Contract | Role |
+| --- | --- |
+| `FairSeatVerifier` | Verify-once by a tiny self-send; checks the Agent ID, emits `Verified`, refunds the dust, reverts for non-holders. |
+| `GiveawayVault` | Locks the prize; permissionless `resolve()`; first-come / random / split-equally payout to Agent-ID winners; leftover back to the host. |
+| `Poll` | One Agent ID, one vote; public on-chain tally. |
+| `BatchDistributor` | Pays a verified list in one transaction; non-holders skipped and refunded. |
+
+The test-only `MockAgentIdRegistry` and `MockERC20` under `contracts/contracts/mocks/` are never deployed to mainnet; the deploy script uses the real registry on chain 56.
+
+## Bot commands & API
+
+**Telegram** (tap `/` for the menu): `/verify`, `/mystatus`, `/giveaway` (hosts), `/poll` (hosts), `/enter`, `/start`.
+
+**HTTP API** (same backend, used by the site):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/config` | Chain + contract addresses |
+| `GET` | `/api/giveaways`, `/api/giveaways/:id` | Public giveaways |
+| `POST` | `/api/verify/start`, `GET /api/verify/status` | Web verification session |
+| `POST` | `/api/giveaways/:id/enter` | Enter a giveaway |
+| `POST` | `/api/prepare`, `/api/polls/prepare` | Build a create-giveaway / create-poll transaction |
+| `GET` | `/api/polls`, `/api/polls/:id`, `POST /api/polls/:id/vote` | Polls |
+| `GET` | `/api/draw/:id` | Public draw data for recomputing winners |
+
+## Security and privacy
+
+- **No keys, ever.** FairSeat never asks for a private key, seed phrase or login, and never signs on your behalf. Every transaction is one you send and confirm in your own wallet.
+- **No custody.** There is no owner that can move user funds. The only privileged role is an immutable `operator` on the vault and poll that can *only* submit off-chain-tap entrants and votes; it can never withdraw, mint, pause or take funds. Full disclosure: [`docs/OWNER-PERMISSIONS.md`](docs/OWNER-PERMISSIONS.md).
+- **What is stored.** A local SQLite database holds identity-to-wallet bindings and verification sessions. No keys, no funds, no wallet sessions.
+- **Audited internally.** An attacker-minded review of the contracts and backend, each finding fixed and covered by a regression test: [`audit.md`](audit.md). No Critical or High findings; not independently audited (see [Limitations](#limitations)).
+- **Open and verified.** All four contracts are open-source and verified on BscScan (links in [Facts](#facts)).
 
 ## Run it locally
 
@@ -111,14 +155,26 @@ pnpm dev
 cd web && pnpm dev
 ```
 
-Deploying to BNB Chain and hosting: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+`.env` files and every database and key file are git-ignored; `.env.example` documents each variable. Deploying to BNB Chain, verifying on BscScan, and hosting the backend + site: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
+## Repository layout
+
+```
+contracts/     Solidity contracts, Hardhat tests, deploy script
+bot/           Backend: Telegram bot + HTTP API + chain-watcher
+web/           Website (Vite + React)
+docs/          ARCHITECTURE.md, DEPLOY.md, OWNER-PERMISSIONS.md, screenshots/
+brand/         Logo
+audit.md       Internal security audit
+```
 
 ## Limitations
 
-- Sybil-resistance equals Binance KYC, which is off-chain; it cannot stop someone running several real Binance accounts.
-- Randomness is block-hash based, not a VRF: fully recomputable, but a block producer could bias one block hash.
-- Internally audited only, single reviewer.
+- **Sybil-resistance equals Binance KYC**, which is off-chain. FairSeat enforces one seat per Agent ID, but one-per-person rests on Binance KYC; it cannot stop someone who controls several real Binance accounts.
+- **Randomness is block-hash based, not a VRF.** Good for community giveaways and fully recomputable; a block producer could bias a single block hash. The backend resolves promptly so the un-grindable path is the norm (`audit.md`, F-5).
+- **Internally audited, not third-party audited.** Single reviewer; no formal verification or fuzzing.
+- **Verification uses a unique dust amount** with no memo, so a pending amount is a per-user secret with a 60-minute window (`audit.md`, F-4).
 
-## License
+## Credits and license
 
-[MIT](LICENSE). Fonts: Bricolage Grotesque and Hanken Grotesk (SIL OFL). Libraries: OpenZeppelin, Hardhat, ethers, grammY, React, Vite, each under its own license.
+[MIT](LICENSE). Fonts: [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) and [Hanken Grotesk](https://fonts.google.com/specimen/Hanken+Grotesk), both SIL Open Font License. Libraries: [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts), [Hardhat](https://hardhat.org), [ethers.js](https://github.com/ethers-io/ethers.js), [grammY](https://grammy.dev), [React](https://react.dev), [Vite](https://vitejs.dev), each under its own license. Agent ID registry: Binance / [SPACE ID](https://space.id).

@@ -37,6 +37,7 @@ function verifyMessage(amount: string): string {
     "That's it - I'll confirm here automatically and refund the tiny amount. No keys, no logins, " +
     "and you confirm the transfer yourself in your own wallet.\n\n" +
     "You can send it from the Binance app's on-chain withdrawal (Binance Pro) or any wallet that holds your Agent ID.\n\n" +
+    "*Add it to your Address Book:* open your Binance Wallet, tap the menu icon at the top-right, scroll to *Address Book*, tap *Add address*, choose *BNB Chain*, paste the address above, label it \"FairSeat\", and save. Then just Send to it.\n\n" +
     `_Send the exact amount so I can match it to you. Network: ${net}._`
   );
 }

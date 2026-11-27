@@ -130,6 +130,16 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
       <div className="small muted">
         You can send from the Binance app's on-chain withdrawal (Binance Pro) or any wallet that holds your Agent ID - on the BNB&nbsp;Chain network.
       </div>
+      <details className="guide">
+        <summary>How do I add it to my Binance Address Book?</summary>
+        <ol>
+          <li>Open the Binance app and go to your <b>Binance Wallet</b>.</li>
+          <li>Tap the <b>menu icon at the top-right</b> of the wallet screen.</li>
+          <li>Scroll down and open <b>Address Book</b>.</li>
+          <li>Tap <b>Add address</b>, choose <b>BNB Chain</b>, paste the address above, label it "FairSeat", and save.</li>
+          <li>Back in the wallet, <b>Send</b> the exact amount to your saved "FairSeat" address.</li>
+        </ol>
+      </details>
       <div className="row">
         <span className="small muted">
           <span className="spinner" style={{ marginRight: 8 }} /> waiting for your transaction…
