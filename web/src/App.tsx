@@ -58,7 +58,7 @@ function AppHeader({ base, identity }: { base: string; identity: Identity }) {
 }
 
 function Gate() {
-  const { refresh } = useIdentity();
+  const { identity, refresh } = useIdentity();
   const cells = Array.from({ length: 24 }, (_, i) => i);
   return (
     <div className="gate">
@@ -67,10 +67,11 @@ function Gate() {
           <div key={i} className={`seat-cell ${i === 11 ? "lit" : [3, 7, 14, 20].includes(i) ? "taken" : ""}`} />
         ))}
       </div>
-      <h1 data-enter="2">Take your seat</h1>
+      <h1 data-enter="2">{identity ? "Your seat" : "Take your seat"}</h1>
       <p className="lead" data-enter="2">
-        FairSeat is for verified Binance Agent IDs. Prove yours once - one tiny transaction, refunded - and every
-        giveaway and vote opens up.
+        {identity
+          ? "You're verified. Copy your seat key below to use your seat on another device, or to link your Telegram bot with /restore."
+          : "FairSeat is for verified Binance Agent IDs. Prove yours once - one tiny transaction, refunded - and every giveaway and vote opens up."}
       </p>
       <div data-enter="3" style={{ textAlign: "left" }}>
         <Verify onVerified={() => refresh()} />

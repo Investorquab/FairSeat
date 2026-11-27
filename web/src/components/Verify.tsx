@@ -56,7 +56,21 @@ export function Verify({ onVerified }: { onVerified?: (wallet: string) => void }
   const poll = useRef<number | null>(null);
 
   useEffect(() => {
-    if (identity) onVerified?.(identity.wallet);
+    if (identity) {
+      onVerified?.(identity.wallet);
+      // Backfill the seat key for sessions verified before seat keys existed.
+      if (!identity.seatKey) {
+        api
+          .verifyStatus(identity.token)
+          .then((st) => {
+            if (st.seatKey) {
+              persistIdentity(identity.token, identity.wallet, st.seatKey);
+              setIdentity({ ...identity, seatKey: st.seatKey });
+            }
+          })
+          .catch(() => {});
+      }
+    }
     return () => {
       if (poll.current) window.clearInterval(poll.current);
     };
